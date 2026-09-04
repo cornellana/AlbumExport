@@ -17,17 +17,36 @@ enum ExifToolLocator {
         return output?.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
+    /// Salida estándar y de error combinadas (para mensajes).
     static func run(_ url: URL, arguments: [String]) throws -> String {
+        let output = try runSeparated(url, arguments: arguments)
+        return output.stdout + output.stderr
+    }
+
+    /// Salida estándar y de error por separado. Imprescindible para leer JSON (`-j`): los
+    /// avisos de exiftool (p. ej. notas de fabricante de DNG de DJI) van a stderr y, mezclados
+    /// con el JSON, lo invalidarían.
+    static func runSeparated(_ url: URL, arguments: [String]) throws -> (stdout: String, stderr: String) {
         let process = Process()
         process.executableURL = url
         process.arguments = arguments
-        let pipe = Pipe()
-        process.standardOutput = pipe
-        process.standardError = pipe
+        let out = Pipe()
+        let err = Pipe()
+        process.standardOutput = out
+        process.standardError = err
         try process.run()
-        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        // Leer stderr en otro hilo evita el bloqueo si ambas tuberías se llenan.
+        var errorData = Data()
+        let group = DispatchGroup()
+        group.enter()
+        DispatchQueue.global().async {
+            errorData = err.fileHandleForReading.readDataToEndOfFile()
+            group.leave()
+        }
+        let outputData = out.fileHandleForReading.readDataToEndOfFile()
         process.waitUntilExit()
-        return String(decoding: data, as: UTF8.self)
+        group.wait()
+        return (String(decoding: outputData, as: UTF8.self), String(decoding: errorData, as: UTF8.self))
     }
 }
 
@@ -164,7 +183,12 @@ struct ExifToolWriter {
         guard !urls.isEmpty else { return [:] }
         let argfile = try writeArgFile(urls.map(\.path).joined(separator: "\n") + "\n")
         defer { try? FileManager.default.removeItem(at: argfile) }
-        let output = try ExifToolLocator.run(executable, arguments: ["-j", "-XMP-xmp:Rating", "-XMP-xmp:Label", "-XMP-dc:Subject", "-@", argfile.path])
+        let output = try ExifToolLocator.runSeparated(executable, arguments: ["-j", "-XMP-xmp:Rating", "-XMP-xmp:Label", "-XMP-dc:Subject", "-@", argfile.path]).stdout
+        return Self.parseReadBack(output)
+    }
+
+    /// Interpreta la salida JSON de `exiftool -j`.
+    static func parseReadBack(_ output: String) -> [String: ReadBack] {
         guard let start = output.firstIndex(of: "["),
               let array = try? JSONSerialization.jsonObject(with: Data(output[start...].utf8)) as? [[String: Any]] else {
             return [:]

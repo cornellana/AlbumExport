@@ -6,6 +6,8 @@ enum ExportEvent: Sendable {
     /// (sirve para medir la velocidad); `bytesDone` incluye también lo que ya estaba hecho.
     case progress(completed: Int, total: Int, bytesDone: Int64, bytesTransferred: Int64, current: String)
     case log(String)
+    /// Cambio de estado de una foto, para que la tabla se actualice mientras se exporta.
+    case status(jobID: Int, status: JobStatus, destination: URL?)
 }
 
 /// Motivo por el que una exportación se detuvo antes de terminar. El estado ya hecho
@@ -112,6 +114,11 @@ struct ExportEngine {
             events(.log(String(localized: "Network destination: each batch is prepared locally and uploaded once.", comment: "Línea de registro")))
         }
 
+        func update(_ index: Int, _ status: JobStatus) {
+            jobs[index].status = status
+            events(.status(jobID: jobs[index].id, status: status, destination: jobs[index].destination))
+        }
+
         func progress(_ current: String) {
             events(.progress(completed: completed, total: total, bytesDone: bytesDone, bytesTransferred: bytesTransferred, current: current))
         }
@@ -153,10 +160,10 @@ struct ExportEngine {
                     completed += 1
                     bytesDone += size
                     if existing.metadataDone && !options.refreshExisting {
-                        jobs[index].status = .alreadyExported
+                        update(index, .alreadyExported)
                     } else {
                         // Metadatos pendientes (corte anterior) o refresco: se escriben sobre el fichero ya subido.
-                        jobs[index].status = .copied
+                        update(index, .copied)
                         works.append(Work(index: index, folder: folder, workURL: existing.url, finalURL: existing.url, needsUpload: false, bytes: 0))
                     }
                     continue
@@ -168,7 +175,7 @@ struct ExportEngine {
                 if manifests[folder]?.isUnclaimed(filename: job.photo.filename) == true,
                    FileManager.default.fileExists(atPath: sameName.path), ExportPlanner.fileSize(sameName) == size {
                     jobs[index].destination = sameName
-                    jobs[index].status = .copied
+                    update(index, .copied)
                     allocators[folder]?.reserve(job.photo.filename)
                     manifests[folder]?.record(uuid: job.photo.uuid, filename: job.photo.filename, metadataDone: false)
                     completed += 1
@@ -184,7 +191,7 @@ struct ExportEngine {
                     try transfer(from: source, to: workURL)
                     consecutiveFailures = 0
                     jobs[index].destination = target
-                    jobs[index].status = .copied
+                    update(index, .copied)
                     works.append(Work(index: index, folder: folder, workURL: workURL, finalURL: target, needsUpload: staging != nil, bytes: size))
                     if staging == nil {
                         completed += 1
@@ -195,7 +202,7 @@ struct ExportEngine {
                         try catalog.adjustmentsJSON(variantID: variant).write(to: workURL.appendingPathExtension("captureone.json"))
                     }
                 } catch {
-                    jobs[index].status = .failed(error.localizedDescription)
+                    update(index, .failed(error.localizedDescription))
                     events(.log(String(localized: "Failed to copy \(job.photo.filename): \(error.localizedDescription)", comment: "Línea de registro")))
                     if noteFailure() { interruption = .destinationUnavailable(destination.path); break }
                 }
@@ -213,19 +220,19 @@ struct ExportEngine {
                     for work in writable {
                         let path = work.workURL.path
                         if let error = errors[path] {
-                            jobs[work.index].status = .failed(error)
+                            update(work.index, .failed(error))
                         } else if let read = readBack[path], ExifToolWriter.matches(jobs[work.index].photo, read) {
                             metadataOK.insert(work.index)
                         } else {
-                            jobs[work.index].status = .verificationFailed
+                            update(work.index, .verificationFailed)
                         }
                     }
                 }
                 for work in copied where !ExifToolWriter.supports(work.finalURL) {
-                    jobs[work.index].status = .doneWithoutMetadata
+                    update(work.index, .doneWithoutMetadata)
                 }
             } else if interruption == nil {
-                for work in copied { jobs[work.index].status = .doneWithoutMetadata }
+                for work in copied { update(work.index, .doneWithoutMetadata) }
             }
 
             // MARK: Fase 3: colocar cada fichero con su nombre definitivo y registrar el manifiesto
@@ -238,11 +245,11 @@ struct ExportEngine {
                 // interrumpa: solo le faltarán los metadatos, que se escriben al reanudar.
                 if failed || (interruption != nil && work.needsUpload) {
                     discard(work, sourceURL: job.photo.source)
-                    if interruption != nil, job.status == .copied { jobs[work.index].status = .pending }
+                    if interruption != nil, job.status == .copied { update(work.index, .pending) }
                     continue
                 }
                 if interruption != nil, job.status == .copied, !options.writeMetadata {
-                    jobs[work.index].status = .doneWithoutMetadata
+                    update(work.index, .doneWithoutMetadata)
                 }
                 if work.workURL != work.finalURL {
                     do {
@@ -258,7 +265,7 @@ struct ExportEngine {
                         }
                         consecutiveFailures = 0
                     } catch {
-                        jobs[work.index].status = .failed(error.localizedDescription)
+                        update(work.index, .failed(error.localizedDescription))
                         events(.log(String(localized: "Failed to copy \(job.photo.filename): \(error.localizedDescription)", comment: "Línea de registro")))
                         discard(work, sourceURL: job.photo.source)
                         if noteFailure() { interruption = .destinationUnavailable(destination.path) }
@@ -266,7 +273,7 @@ struct ExportEngine {
                     }
                 }
                 let done = metadataOK.contains(work.index) || jobs[work.index].status == .doneWithoutMetadata
-                if metadataOK.contains(work.index) { jobs[work.index].status = .done }
+                if metadataOK.contains(work.index) { update(work.index, .done) }
                 manifests[work.folder]?.record(uuid: job.photo.uuid, filename: work.finalURL.lastPathComponent, metadataDone: done)
             }
             saveManifests()

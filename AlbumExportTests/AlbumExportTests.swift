@@ -137,6 +137,30 @@ struct FixtureCatalog {
     #expect(cleared.contains("-XMP-xmp:Label="))
 }
 
+/// La relectura interpreta el JSON de exiftool aunque venga precedido de texto, y tolera
+/// valores en formatos distintos (número, cadena, lista de un elemento).
+@Test func readBackParsing() {
+    let json = """
+    [{"SourceFile":"/a/x.ARW","Rating":5,"Label":"Green","Subject":["David","Judit"]},
+     {"SourceFile":"/a/y.DNG"},
+     {"SourceFile":"/a/z.tif","Rating":"3","Subject":"Solo"}]
+    """
+    let parsed = ExifToolWriter.parseReadBack(json)
+    #expect(parsed["/a/x.ARW"]?.rating == 5)
+    #expect(parsed["/a/x.ARW"]?.label == "Green")
+    #expect(parsed["/a/x.ARW"]?.subject == ["David", "Judit"])
+    #expect(parsed["/a/y.DNG"]?.rating == nil)
+    #expect(parsed["/a/y.DNG"]?.subject == [])
+    #expect(parsed["/a/z.tif"]?.rating == 3)
+    #expect(parsed["/a/z.tif"]?.subject == ["Solo"])
+    #expect(ExifToolWriter.parseReadBack("Warning: something\n" + json).count == 3)
+    #expect(ExifToolWriter.parseReadBack("").isEmpty)
+
+    // Sin rating ni color en el catálogo (DNG del dron), la verificación solo compara keywords.
+    let photo = Photo(id: 1, uuid: "u", filename: "y.DNG", source: nil, isTrashed: false, isInsideCatalog: true)
+    #expect(ExifToolWriter.matches(photo, parsed["/a/y.DNG"]!))
+}
+
 // MARK: - Lectura del catálogo
 
 @Test func readsAlbumsPathsAndMetadata() throws {

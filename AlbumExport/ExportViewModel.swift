@@ -320,6 +320,12 @@ final class ExportViewModel {
             }
         case .log(let line):
             logLines.append(line)
+        case .status(let jobID, let status, let destination):
+            // Refleja en la tabla el estado de cada foto según avanza (atenuado al completarse).
+            if let index = plan?.jobs.firstIndex(where: { $0.id == jobID }) {
+                plan?.jobs[index].status = status
+                plan?.jobs[index].destination = destination
+            }
         }
     }
 
