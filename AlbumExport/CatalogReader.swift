@@ -283,6 +283,50 @@ final class CatalogReader: @unchecked Sendable {
             """, [layerID]).first?.values
     }
 
+    // MARK: - Verificación
+
+    private func allImageLocations() throws -> [(filename: String, relative: Bool, root: String?, path: String?)] {
+        try db.query("""
+            SELECT i.ZIMAGEFILENAME AS f, p.ZISRELATIVE AS rel, p.ZMACROOT AS root, p.ZRELATIVEPATH AS path
+            FROM ZIMAGE i LEFT JOIN ZPATHLOCATION p ON p.Z_PK = i.ZIMAGELOCATION
+            """).compactMap { row in
+            guard let f = row.string("f") else { return nil }
+            return (f, row.bool("rel"), row.string("root"), row.string("path"))
+        }
+    }
+
+    /// Rutas relativas al bundle (en minúsculas) de todos los originales que el índice
+    /// referencia dentro del catálogo, papelera incluida.
+    func referencedRelativePaths() throws -> Set<String> {
+        var set: Set<String> = []
+        for loc in try allImageLocations() where loc.relative {
+            guard let path = loc.path else { continue }
+            set.insert((path + "/" + loc.filename).lowercased())
+        }
+        return set
+    }
+
+    /// Imágenes del índice cuyo fichero no existe donde el catálogo espera (offline).
+    func missingFiles() throws -> [MissingFile] {
+        var missing: [MissingFile] = []
+        for loc in try allImageLocations() {
+            let url: URL
+            if loc.relative, let path = loc.path {
+                url = rootURL.appendingPathComponent(path).appendingPathComponent(loc.filename)
+            } else if let path = loc.path {
+                let trimmed = path.hasPrefix("/") ? String(path.dropFirst()) : path
+                url = URL(fileURLWithPath: loc.root ?? "/").appendingPathComponent(trimmed).appendingPathComponent(loc.filename)
+            } else {
+                missing.append(MissingFile(filename: loc.filename, expectedPath: "?"))
+                continue
+            }
+            if !FileManager.default.fileExists(atPath: url.path) {
+                missing.append(MissingFile(filename: loc.filename, expectedPath: url.path))
+            }
+        }
+        return missing.sorted { $0.expectedPath < $1.expectedPath }
+    }
+
     // MARK: - Keywords
 
     /// Descompone `ZCONTENT_KEYWORDS` ("Nombre||0,Otro||1": nombre, separador, índice de orden).

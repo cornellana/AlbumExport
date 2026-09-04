@@ -222,6 +222,30 @@ struct FixtureCatalog {
     #expect(photos.allSatisfy { $0.fields["ZCONTACT_CREATOR"] == "© Cornellana" })
 }
 
+/// Verificación: un fichero en Originals sin registro es huérfano; un registro sin fichero, ausente.
+/// Mover los huérfanos conserva la estructura de carpetas y los saca del bundle.
+@Test func verifiesOrphansAndMissingFiles() throws {
+    let fixture = try FixtureCatalog()
+    defer { fixture.cleanup() }
+    let orphan = fixture.bundle.appendingPathComponent("Originals/2026/01/01/1/ORPHAN.jpg")
+    try FixtureCatalog.writeJPEG(to: orphan)
+    try Data().write(to: fixture.bundle.appendingPathComponent("Originals/2026/01/01/1/.DS_Store"))   // oculto: se ignora
+    let reader = try CatalogReader(url: fixture.bundle)
+
+    let result = try CatalogVerifier.scan(catalog: reader)
+    #expect(result.filesOnDisk == 4)          // 3 registrados + el huérfano
+    #expect(result.referenced == 4)           // rutas distintas: la foto en papelera comparte fichero con otra
+    #expect(result.orphans.map(\.relativePath) == ["Originals/2026/01/01/1/ORPHAN.jpg"])
+    #expect(result.missing.map(\.filename) == ["MISSING.jpg"])
+
+    let target = fixture.root.appendingPathComponent("Huerfanos")
+    let errors = CatalogVerifier.moveOrphans(result.orphans, to: target)
+    #expect(errors.isEmpty)
+    #expect(!FileManager.default.fileExists(atPath: orphan.path))
+    #expect(FileManager.default.fileExists(atPath: target.appendingPathComponent("Originals/2026/01/01/1/ORPHAN.jpg").path))
+    #expect(try CatalogVerifier.scan(catalog: reader).orphans.isEmpty)
+}
+
 // MARK: - Exportación
 
 @Test func plansCopiesAndKeepsManifest() throws {

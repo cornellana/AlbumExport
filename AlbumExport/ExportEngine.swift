@@ -404,6 +404,14 @@ actor CatalogWorker {
         try reader.albums()
     }
 
+    func verify() throws -> VerifyResult {
+        try CatalogVerifier.scan(catalog: reader)
+    }
+
+    func moveOrphans(_ orphans: [OrphanFile], to folder: URL) -> [String: String] {
+        CatalogVerifier.moveOrphans(orphans, to: folder)
+    }
+
     func plan(patterns: [String], selectedAlbumIDs: Set<Int>, albums: [Album], options: ExportOptions, destination: URL?) throws -> ExportPlan {
         try ExportPlanner.plan(patterns: patterns, selectedAlbumIDs: selectedAlbumIDs, albums: albums, catalog: reader, options: options, destination: destination)
     }

@@ -338,6 +338,76 @@ final class ExportViewModel {
         UserDefaults.standard.set(lastThroughput, forKey: Self.throughputKey)
     }
 
+    // MARK: - Verificación del catálogo
+
+    private(set) var verifyResult: VerifyResult?
+    private(set) var isVerifying = false
+    var showVerify = false
+    var showMoveOrphansConfirmation = false
+    private(set) var orphanTargetFolder: URL?
+    private(set) var orphanMoveSummary: String?
+
+    /// Compara `Originals/` con el índice: huérfanos en disco y ficheros ausentes.
+    func verifyCatalog() {
+        guard let worker, !isVerifying else { return }
+        isVerifying = true
+        verifyResult = nil
+        orphanMoveSummary = nil
+        showVerify = true
+        Task {
+            do {
+                verifyResult = try await worker.verify()
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+            isVerifying = false
+        }
+    }
+
+    /// Pide la carpeta destino y la confirmación antes de sacar los huérfanos del bundle.
+    func chooseOrphanFolder() {
+        guard let result = verifyResult, !result.orphans.isEmpty else { return }
+        let panel = NSOpenPanel()
+        panel.title = String(localized: "Choose where to move the orphan files", comment: "Título del diálogo de huérfanos")
+        panel.canChooseFiles = false
+        panel.canChooseDirectories = true
+        panel.canCreateDirectories = true
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        if let root = worker?.reader.rootURL, url.path.hasPrefix(root.path) {
+            errorMessage = String(localized: "The destination cannot be inside the catalog.", comment: "Error de destino")
+            return
+        }
+        orphanTargetFolder = url
+        showMoveOrphansConfirmation = true
+    }
+
+    func moveOrphans() {
+        guard let worker, let result = verifyResult, let folder = orphanTargetFolder else { return }
+        isVerifying = true
+        Task {
+            let errors = await worker.moveOrphans(result.orphans, to: folder)
+            let moved = result.orphans.count - errors.count
+            orphanMoveSummary = String(localized: "Orphans moved: \(moved), errors: \(errors.count)", comment: "Resumen tras mover huérfanos")
+            let reportURL = folder.appendingPathComponent("AlbumExport_orphans.csv")
+            try? CatalogVerifier.writeReport(result, catalogName: catalogURL?.lastPathComponent ?? "", to: reportURL)
+            // Volver a escanear para reflejar el estado real tras el movimiento.
+            if let refreshed = try? await worker.verify() { verifyResult = refreshed }
+            isVerifying = false
+        }
+    }
+
+    func saveVerifyReport() {
+        guard let result = verifyResult else { return }
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "AlbumExport_verify.csv"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            try CatalogVerifier.writeReport(result, catalogName: catalogURL?.lastPathComponent ?? "", to: url)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     func revealReport() {
         guard let url = summary?.reportURL else { return }
         NSWorkspace.shared.activateFileViewerSelecting([url])

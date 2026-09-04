@@ -11,12 +11,14 @@
 		0E0834F5011FEBAB88B94BE5 /* ExportEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3527966E4CDEFE2D7CBF8994 /* ExportEngine.swift */; };
 		15D4276E9464B224839BDC51 /* AlbumExportApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2996CFFDDDCAF3EF97FABF4D /* AlbumExportApp.swift */; };
 		2C334E431EDF8E6E5A0446A9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8ED2D3D5B36A959D88532A57 /* Assets.xcassets */; };
+		4B4687086F6B3945D6042FD3 /* VerifyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3814B79F9D8A5DB4A3067999 /* VerifyView.swift */; };
 		500D51A02E8DDA15170DF0BE /* SQLiteDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7AA7A6D84AD367A8430C8A1 /* SQLiteDatabase.swift */; };
 		553C62F26581C43EE46B65C5 /* PlanView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F82294DC54F8E99A47689212 /* PlanView.swift */; };
 		66134A6DBB92248B1C17E1D8 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11E10BD130817EB3E4FC7D28 /* Models.swift */; };
 		73AB8BBB623C3016C7919E7A /* ExportViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A550B7DA2BF399931107FE64 /* ExportViewModel.swift */; };
 		7F55DA02C40E68138FADFE0A /* CatalogReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = C63EA0924A00A56E707AC67F /* CatalogReader.swift */; };
 		93F86C93ADAB015752ADCFFB /* ExifToolWriter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 468A34293B42CD68CCA92C10 /* ExifToolWriter.swift */; };
+		AE5E2DA66CEDDA4CAA16F5EF /* CatalogVerifier.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1537DBA5DD0C59776AB066E6 /* CatalogVerifier.swift */; };
 		C1574F75AB24C544279BE434 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 952C5A6E11646CA2CA3B6D10 /* ContentView.swift */; };
 		C6F8747B31C814CE6CB16AC2 /* PatternMatcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2361785DBD4F701102C40803 /* PatternMatcher.swift */; };
 		D417F405261CBB70A50D960B /* ExportPlanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65F3AE9672A9E63424922B7B /* ExportPlanner.swift */; };
@@ -36,11 +38,13 @@
 /* Begin PBXFileReference section */
 		0A4E420CC9842D97F6F851FF /* AlbumExport.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = AlbumExport.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		11E10BD130817EB3E4FC7D28 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		1537DBA5DD0C59776AB066E6 /* CatalogVerifier.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogVerifier.swift; sourceTree = "<group>"; };
 		2361785DBD4F701102C40803 /* PatternMatcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PatternMatcher.swift; sourceTree = "<group>"; };
 		2996CFFDDDCAF3EF97FABF4D /* AlbumExportApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumExportApp.swift; sourceTree = "<group>"; };
 		325073CD8D2F2598D022CA19 /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		3527706E174B20B150090798 /* AlbumExportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AlbumExportTests.swift; sourceTree = "<group>"; };
 		3527966E4CDEFE2D7CBF8994 /* ExportEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportEngine.swift; sourceTree = "<group>"; };
+		3814B79F9D8A5DB4A3067999 /* VerifyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerifyView.swift; sourceTree = "<group>"; };
 		4225F99DEEF539E8EF423B03 /* AlbumExportTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AlbumExportTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		468A34293B42CD68CCA92C10 /* ExifToolWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExifToolWriter.swift; sourceTree = "<group>"; };
 		65F3AE9672A9E63424922B7B /* ExportPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportPlanner.swift; sourceTree = "<group>"; };
@@ -87,6 +91,7 @@
 				2996CFFDDDCAF3EF97FABF4D /* AlbumExportApp.swift */,
 				8ED2D3D5B36A959D88532A57 /* Assets.xcassets */,
 				C63EA0924A00A56E707AC67F /* CatalogReader.swift */,
+				1537DBA5DD0C59776AB066E6 /* CatalogVerifier.swift */,
 				952C5A6E11646CA2CA3B6D10 /* ContentView.swift */,
 				468A34293B42CD68CCA92C10 /* ExifToolWriter.swift */,
 				3527966E4CDEFE2D7CBF8994 /* ExportEngine.swift */,
@@ -97,6 +102,7 @@
 				2361785DBD4F701102C40803 /* PatternMatcher.swift */,
 				F82294DC54F8E99A47689212 /* PlanView.swift */,
 				D7AA7A6D84AD367A8430C8A1 /* SQLiteDatabase.swift */,
+				3814B79F9D8A5DB4A3067999 /* VerifyView.swift */,
 			);
 			path = AlbumExport;
 			sourceTree = "<group>";
@@ -200,6 +206,7 @@
 			files = (
 				15D4276E9464B224839BDC51 /* AlbumExportApp.swift in Sources */,
 				7F55DA02C40E68138FADFE0A /* CatalogReader.swift in Sources */,
+				AE5E2DA66CEDDA4CAA16F5EF /* CatalogVerifier.swift in Sources */,
 				C1574F75AB24C544279BE434 /* ContentView.swift in Sources */,
 				93F86C93ADAB015752ADCFFB /* ExifToolWriter.swift in Sources */,
 				0E0834F5011FEBAB88B94BE5 /* ExportEngine.swift in Sources */,
@@ -209,6 +216,7 @@
 				C6F8747B31C814CE6CB16AC2 /* PatternMatcher.swift in Sources */,
 				553C62F26581C43EE46B65C5 /* PlanView.swift in Sources */,
 				500D51A02E8DDA15170DF0BE /* SQLiteDatabase.swift in Sources */,
+				4B4687086F6B3945D6042FD3 /* VerifyView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

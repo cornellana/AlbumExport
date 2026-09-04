@@ -401,6 +401,38 @@
         }
       }
     },
+    "Choose where to move the orphan files": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tria on moure els fitxers orfes"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elige dónde mover los ficheros huérfanos"
+          }
+        }
+      }
+    },
+    "Close": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tanca"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerrar"
+          }
+        }
+      }
+    },
     "Color": {
       "localizations": {
         "ca": {
@@ -429,6 +461,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "No existe la columna %@: ese campo no se exportará."
+          }
+        }
+      }
+    },
+    "Compare the Originals folder with the catalog index and list orphan files": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compara la carpeta Originals amb l'índex del catàleg i llista els fitxers orfes"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compara la carpeta Originals con el índice del catálogo y lista los ficheros huérfanos"
           }
         }
       }
@@ -625,6 +673,22 @@
         }
       }
     },
+    "Expected location": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ubicació esperada"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ubicación esperada"
+          }
+        }
+      }
+    },
     "Export": {
       "localizations": {
         "ca": {
@@ -701,6 +765,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fichero"
+          }
+        }
+      }
+    },
+    "Files in Originals: %lld": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fitxers a Originals: %lld"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ficheros en Originals: %lld"
           }
         }
       }
@@ -849,6 +929,38 @@
         }
       }
     },
+    "Missing files": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fitxers absents"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ficheros ausentes"
+          }
+        }
+      }
+    },
+    "Missing files: %lld": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fitxers absents: %lld"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ficheros ausentes: %lld"
+          }
+        }
+      }
+    },
     "Move": {
       "localizations": {
         "ca": {
@@ -865,6 +977,22 @@
         }
       }
     },
+    "Move %lld orphan files out of the catalog?": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vols moure %lld fitxers orfes fora del catàleg?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Mover %lld ficheros huérfanos fuera del catálogo?"
+          }
+        }
+      }
+    },
     "Move files": {
       "localizations": {
         "ca": {
@@ -877,6 +1005,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mover ficheros"
+          }
+        }
+      }
+    },
+    "Move orphans to folder…": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mou els orfes a una carpeta…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mover huérfanos a carpeta…"
           }
         }
       }
@@ -973,6 +1117,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sin color"
+          }
+        }
+      }
+    },
+    "No missing files": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No falta cap fitxer"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No falta ningún fichero"
+          }
+        }
+      }
+    },
+    "No orphan files": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No hi ha fitxers orfes"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No hay ficheros huérfanos"
           }
         }
       }
@@ -1121,6 +1297,70 @@
         }
       }
     },
+    "Orphan files": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fitxers orfes"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ficheros huérfanos"
+          }
+        }
+      }
+    },
+    "Orphans moved: %lld, errors: %lld": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Orfes moguts: %lld, errors: %lld"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Huérfanos movidos: %lld, errores: %lld"
+          }
+        }
+      }
+    },
+    "Orphans: %lld (%@)": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Orfes: %lld (%@)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Huérfanos: %lld (%@)"
+          }
+        }
+      }
+    },
+    "Path": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ruta"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ruta"
+          }
+        }
+      }
+    },
     "Pending": {
       "localizations": {
         "ca": {
@@ -1249,6 +1489,22 @@
         }
       }
     },
+    "Referenced by the index: %lld": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Referenciats per l'índex: %lld"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Referenciados por el índice: %lld"
+          }
+        }
+      }
+    },
     "Refresh already exported": {
       "localizations": {
         "ca": {
@@ -1297,6 +1553,22 @@
         }
       }
     },
+    "Save report…": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desa l'informe…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guardar informe…"
+          }
+        }
+      }
+    },
     "Show Report": {
       "localizations": {
         "ca": {
@@ -1325,6 +1597,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mostrar en el Finder"
+          }
+        }
+      }
+    },
+    "Size": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mida"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tamaño"
           }
         }
       }
@@ -1425,6 +1713,22 @@
         }
       }
     },
+    "They will be moved to %@ keeping their folder structure, so they can be imported again.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Es mouran a %@ conservant l'estructura de carpetes, per poder-los importar de nou."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se moverán a %@ conservando su estructura de carpetas, para poder importarlos de nuevo."
+          }
+        }
+      }
+    },
     "This catalog format is not supported. Missing: %@": {
       "localizations": {
         "ca": {
@@ -1453,6 +1757,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "Usa * y ? como comodines. Separa los patrones con ;"
+          }
+        }
+      }
+    },
+    "Verify": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verifica"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verificar"
+          }
+        }
+      }
+    },
+    "Verify catalog integrity": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verifica la integritat del catàleg"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verificar integridad del catálogo"
+          }
+        }
+      }
+    },
+    "Verifying…": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verificant…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verificando…"
           }
         }
       }

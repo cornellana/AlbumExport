@@ -28,6 +28,13 @@ struct ContentView: View {
                 }
                 .disabled(model.worker == nil)
                 .help("Choose where the photos will be exported")
+                Button {
+                    model.verifyCatalog()
+                } label: {
+                    Label("Verify", systemImage: "checkmark.shield")
+                }
+                .disabled(model.worker == nil || model.isRunning)
+                .help("Compare the Originals folder with the catalog index and list orphan files")
             }
             ToolbarItem(placement: .primaryAction) {
                 Button {
@@ -55,6 +62,9 @@ struct ContentView: View {
         }
         .onChange(of: model.patternsText) { model.refreshPlan() }
         .onChange(of: model.options) { model.refreshPlan() }
+        .sheet(isPresented: $model.showVerify) {
+            VerifyView(model: model)
+        }
     }
 }
 

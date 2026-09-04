@@ -59,6 +59,20 @@ o se cierra la app:
   (copia manual, o hecha con una versión anterior sin manifiesto) se adopta: se registra,
   recibe los metadatos y no se duplica con sufijo `_1`.
 
+## Verificar el catálogo
+
+El botón **Verify** compara la carpeta `Originals/` del bundle con el índice:
+
+- **Huérfanos**: ficheros en `Originals/` que ningún registro referencia (papelera incluida
+  como referencia válida). Se listan con su ruta relativa y tamaño.
+- **Ausentes**: imágenes del índice cuyo fichero no existe donde el catálogo espera
+  (offline), tanto dentro del bundle como en rutas externas.
+
+*Move orphans to folder…* saca los huérfanos del bundle a la carpeta elegida conservando
+la estructura `Originals/AAAA/MM/DD/HHMM/`, para poder reimportarlos, y deja un CSV
+`AlbumExport_orphans.csv` en esa carpeta. Pide confirmación y no toca ningún fichero
+referenciado. *Save report…* guarda el CSV sin mover nada.
+
 ## Última sesión
 
 Al arrancar, la app recupera el último catálogo, los patrones, los álbumes marcados (por
