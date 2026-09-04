@@ -1,29 +1,33 @@
 import SwiftUI
 
-/// Hoja con el resultado de la verificación: huérfanos en `Originals/` y ficheros ausentes.
+/// Panel de verificación: huérfanos en `Originals/`, ficheros ausentes y fotos sin álbum.
 struct VerifyView: View {
     @Bindable var model: ExportViewModel
     @State private var tab: Tab = .orphans
 
-    enum Tab: Hashable { case orphans, missing }
+    enum Tab: Hashable { case orphans, missing, unfiled }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Verify catalog integrity").font(.title2).bold()
-            if model.isVerifying {
+            if model.worker == nil {
+                ContentUnavailableView("No catalog", systemImage: "books.vertical",
+                                       description: Text("Open a Capture One catalog to verify it."))
+            } else if model.isVerifying {
                 HStack {
                     ProgressView().controlSize(.small)
                     Text("Verifying…")
                 }
+                Spacer()
             } else if let result = model.verifyResult {
                 summary(result)
                 Picker("", selection: $tab) {
                     Text("Orphan files").tag(Tab.orphans)
                     Text("Missing files").tag(Tab.missing)
+                    Text("Not in any album").tag(Tab.unfiled)
                 }
                 .pickerStyle(.segmented)
                 .labelsHidden()
-                .frame(width: 320)
+                .frame(width: 440)
                 switch tab {
                 case .orphans:
                     if result.orphans.isEmpty {
@@ -34,38 +38,74 @@ struct VerifyView: View {
                             TableColumn("Size") { Text(verbatim: $0.size.formatted(.byteCount(style: .file))) }.width(90)
                         }
                     }
+                    HStack {
+                        Button("Move orphans to folder…") { model.chooseOrphanFolder() }
+                            .disabled(result.orphans.isEmpty)
+                        Text("Orphans are files inside Originals that the index does not know. Moving them keeps the folder structure so they can be imported again.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                 case .missing:
                     if result.missing.isEmpty {
                         ContentUnavailableView("No missing files", systemImage: "checkmark.seal")
                     } else {
                         Table(result.missing) {
-                            TableColumn("File") { Text(verbatim: $0.filename) }.width(200)
+                            TableColumn("File") { Text(verbatim: $0.filename) }.width(180)
                             TableColumn("Expected location") { Text(verbatim: $0.expectedPath) }
+                            TableColumn("Found at") { item in
+                                Text(verbatim: item.candidate?.path ?? "")
+                                    .foregroundStyle(item.candidate == nil ? Color.secondary : Color.green)
+                            }
                         }
                     }
+                    HStack {
+                        Button("Search in folder…") { model.searchMissing(wholeDisk: false) }
+                            .disabled(result.missing.isEmpty)
+                        Button("Search whole disk (Spotlight)") { model.searchMissing(wholeDisk: true) }
+                            .disabled(result.missing.isEmpty)
+                        Button("Restore found files into the catalog") { model.requestRestore() }
+                            .disabled(result.foundCount == 0)
+                        Text("Matches by file name and size. Restoring copies each found file to the location the catalog expects.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                case .unfiled:
+                    if result.unfiled.isEmpty {
+                        ContentUnavailableView("Every photo is in an album", systemImage: "checkmark.seal")
+                    } else {
+                        Table(result.unfiled) {
+                            TableColumn("File") { Text(verbatim: $0.filename) }.width(180)
+                            TableColumn("Path") { Text(verbatim: $0.path) }
+                        }
+                    }
+                    Text("Photos that are in the catalog index but in no user album. They are still part of the catalog; this list is informative.")
+                        .font(.caption).foregroundStyle(.secondary)
                 }
-                if let summary = model.orphanMoveSummary {
-                    Text(verbatim: summary).foregroundStyle(.secondary)
+                if let message = model.verifyMessage {
+                    Text(verbatim: message).foregroundStyle(.secondary)
                 }
-            }
-            HStack {
-                Button("Move orphans to folder…") { model.chooseOrphanFolder() }
-                    .disabled(model.isVerifying || (model.verifyResult?.orphans.isEmpty ?? true))
-                Button("Save report…") { model.saveVerifyReport() }
-                    .disabled(model.isVerifying || model.verifyResult == nil)
-                Spacer()
-                Button("Close") { model.showVerify = false }
-                    .keyboardShortcut(.cancelAction)
+                HStack {
+                    Button("Verify again") { model.verifyCatalog() }
+                    Button("Save report…") { model.saveVerifyReport() }
+                    Spacer()
+                }
+            } else {
+                ContentUnavailableView("Ready to verify", systemImage: "checkmark.shield",
+                                       description: Text("Press Verify to compare the Originals folder with the catalog index."))
             }
         }
         .padding()
-        .frame(minWidth: 760, minHeight: 480)
         .confirmationDialog("Move \(model.verifyResult?.orphans.count ?? 0) orphan files out of the catalog?",
                             isPresented: $model.showMoveOrphansConfirmation, titleVisibility: .visible) {
             Button("Move", role: .destructive) { model.moveOrphans() }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("They will be moved to \(model.orphanTargetFolder?.path ?? "") keeping their folder structure, so they can be imported again.")
+        }
+        .confirmationDialog("Restore \(model.verifyResult?.foundCount ?? 0) found files into the catalog?",
+                            isPresented: $model.showRestoreConfirmation, titleVisibility: .visible) {
+            Button("Restore") { model.restoreMissing() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Each file is copied to the location the catalog expects. Existing files are never overwritten.")
         }
     }
 
@@ -77,6 +117,7 @@ struct VerifyView: View {
                 .foregroundStyle(result.orphans.isEmpty ? Color.primary : Color.orange)
             Text("Missing files: \(result.missing.count)")
                 .foregroundStyle(result.missing.isEmpty ? Color.primary : Color.red)
+            Text("Not in any album: \(result.unfiled.count)")
         }
         .font(.callout)
     }

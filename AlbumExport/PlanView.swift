@@ -1,102 +1,169 @@
 import SwiftUI
 
-/// Panel de detalle: información del catálogo, opciones, tabla del plan y progreso.
+/// Panel de detalle guiado: acción, datos necesarios para esa acción, plan y progreso.
 struct PlanView: View {
     @Bindable var model: ExportViewModel
 
     var body: some View {
         VStack(spacing: 0) {
-            CatalogHeaderView(model: model)
+            ActionHeaderView(model: model)
                 .padding()
             Divider()
-            OptionsBarView(options: $model.options)
-                .padding(.horizontal)
-                .padding(.vertical, 8)
-            Divider()
-            if let plan = model.plan, !plan.jobs.isEmpty {
-                SummaryBarView(plan: plan, move: model.options.move, isPlanning: model.isPlanning,
-                               estimate: model.isRunning ? nil : model.estimatedRemainingSeconds,
-                               isNetwork: model.destinationIsNetwork)
+            switch model.action {
+            case .verify:
+                VerifyView(model: model)
+            case .copy, .move:
+                OptionsBarView(action: model.action, options: $model.options)
                     .padding(.horizontal)
                     .padding(.vertical, 8)
-                JobsTableView(jobs: plan.jobs)
-            } else {
-                ContentUnavailableView(
-                    "No plan yet",
-                    systemImage: "photo.on.rectangle.angled",
-                    description: Text("Enter a pattern or select albums in the sidebar."))
+                Divider()
+                if let plan = model.plan, !plan.jobs.isEmpty {
+                    SummaryBarView(plan: plan, action: model.action, isPlanning: model.isPlanning,
+                                   estimate: model.isRunning ? nil : model.estimatedRemainingSeconds,
+                                   isNetwork: model.destinationIsNetwork)
+                        .padding(.horizontal)
+                        .padding(.vertical, 8)
+                    JobsTableView(jobs: plan.jobs)
+                } else {
+                    ContentUnavailableView(
+                        "No plan yet",
+                        systemImage: "photo.on.rectangle.angled",
+                        description: Text("Enter a pattern or select albums in the sidebar."))
+                }
+                Divider()
+                FooterView(model: model)
+                    .padding()
             }
-            Divider()
-            FooterView(model: model)
-                .padding()
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 }
 
-// MARK: - Cabecera
+// MARK: - Cabecera: acción y datos que necesita
 
-struct CatalogHeaderView: View {
-    let model: ExportViewModel
+struct ActionHeaderView: View {
+    @Bindable var model: ExportViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            LabeledContent("Catalog") {
-                if let url = model.catalogURL {
-                    Text(verbatim: url.path).textSelection(.enabled)
-                } else {
-                    Text("Not chosen").foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 10) {
+            Picker("What do you want to do?", selection: $model.action) {
+                ForEach(AppAction.allCases, id: \.self) { action in
+                    Text(verbatim: action.title).tag(action)
                 }
             }
-            if let version = model.catalogVersion {
-                LabeledContent("Version") {
-                    Text("Capture One \(version.application), format \(version.format)")
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .disabled(model.isRunning)
+            Text(verbatim: model.action.explanation)
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 6) {
+                // 1. Catálogo de origen (todas las acciones)
+                GridRow {
+                    Text("Catalog").bold()
+                    HStack {
+                        Button("Open Catalog…") { model.chooseCatalog() }
+                        if let url = model.catalogURL {
+                            Text(verbatim: url.path).textSelection(.enabled).lineLimit(1).truncationMode(.middle)
+                        } else {
+                            Text("Not chosen").foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                if let version = model.catalogVersion {
+                    GridRow {
+                        Text("Version").bold()
+                        Text("Capture One \(version.application), format \(version.format)")
+                    }
+                }
+                // 2. Álbumes (copiar y mover)
+                if model.action.needsAlbums {
+                    GridRow {
+                        Text("Albums").bold()
+                        if let plan = model.plan, !plan.matchedAlbums.isEmpty {
+                            Text(verbatim: plan.matchedAlbums.map(\.path).joined(separator: ", ")).lineLimit(2)
+                        } else {
+                            Text("Type a pattern or tick albums in the sidebar").foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                // 3. Destino según acción
+                switch model.action {
+                case .copy:
+                    GridRow {
+                        Text("Destination folder").bold()
+                        HStack {
+                            Button("Choose…") { model.chooseDestination() }.disabled(model.worker == nil)
+                            if let url = model.destinationURL {
+                                Text(verbatim: url.path).textSelection(.enabled).lineLimit(1).truncationMode(.middle)
+                            } else {
+                                Text("Not chosen").foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    GridRow {
+                        Text("exiftool").bold()
+                        if let url = model.exiftoolURL {
+                            Text("\(model.exiftoolVersion ?? "…") at \(url.path)")
+                        } else {
+                            Text("exiftool not found. Install it with Homebrew: brew install exiftool").foregroundStyle(.red)
+                        }
+                    }
+                case .move:
+                    GridRow {
+                        Text("Destination catalog").bold()
+                        HStack {
+                            Button("Choose existing…") { model.chooseDestination() }.disabled(model.worker == nil)
+                            Button("Create new…") { model.createDestinationCatalog() }.disabled(model.worker == nil)
+                            if let url = model.destinationCatalogURL {
+                                Text(verbatim: url.path).textSelection(.enabled).lineLimit(1).truncationMode(.middle)
+                                if !FileManager.default.fileExists(atPath: url.path) {
+                                    Text("(will be created)").foregroundStyle(.secondary)
+                                }
+                            } else {
+                                Text("Not chosen").foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    if model.worker != nil && !model.sourceIsCatalog {
+                        GridRow {
+                            Text("")
+                            Label("Only catalogs can be moved to another catalog, not sessions.", systemImage: "exclamationmark.triangle.fill")
+                                .foregroundStyle(.orange)
+                        }
+                    }
+                case .verify:
+                    EmptyView()
                 }
             }
-            LabeledContent("Destination") {
-                if let url = model.destinationURL {
-                    Text(verbatim: url.path).textSelection(.enabled)
-                } else {
-                    Text("Not chosen").foregroundStyle(.secondary)
-                }
-            }
-            LabeledContent("exiftool") {
-                if let url = model.exiftoolURL {
-                    Text("\(model.exiftoolVersion ?? "…") at \(url.path)")
-                } else {
-                    Text("exiftool not found. Install it with Homebrew: brew install exiftool")
-                        .foregroundStyle(.red)
-                }
-            }
+            .font(.callout)
             ForEach(model.catalogWarnings, id: \.self) { warning in
                 Label { Text(verbatim: warning) } icon: { Image(systemName: "exclamationmark.triangle.fill") }
                     .foregroundStyle(.orange)
                     .font(.callout)
             }
         }
-        .font(.callout)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
-// MARK: - Opciones
+// MARK: - Opciones (solo las que aplican a la acción)
 
 struct OptionsBarView: View {
+    let action: AppAction
     @Binding var options: ExportOptions
 
     var body: some View {
         HStack(spacing: 16) {
-            Picker("Action", selection: $options.move) {
-                Text("Copy").tag(false)
-                Text("Move").tag(true)
+            if action == .copy {
+                Toggle("Write metadata (XMP)", isOn: $options.writeMetadata)
+                Toggle("Adjustments JSON", isOn: $options.adjustmentsJSON)
+                Toggle("Refresh already exported", isOn: $options.refreshExisting)
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .frame(width: 140)
-            Toggle("Write metadata (XMP)", isOn: $options.writeMetadata)
-            Toggle("Adjustments JSON", isOn: $options.adjustmentsJSON)
             Toggle("Include trash", isOn: $options.includeTrashed)
             Toggle("Include automatic albums", isOn: $options.includeAutoAlbums)
-            Toggle("Refresh already exported", isOn: $options.refreshExisting)
             Spacer()
         }
         .toggleStyle(.checkbox)
@@ -108,7 +175,7 @@ struct OptionsBarView: View {
 
 struct SummaryBarView: View {
     let plan: ExportPlan
-    let move: Bool
+    let action: AppAction
     let isPlanning: Bool
     let estimate: TimeInterval?
     let isNetwork: Bool
@@ -117,7 +184,7 @@ struct SummaryBarView: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 16) {
                 let size = plan.totalBytes.formatted(.byteCount(style: .file))
-                if move {
+                if action == .move {
                     Text("\(plan.plannedCount) photos to move, \(size)").fontWeight(.semibold)
                 } else {
                     Text("\(plan.plannedCount) photos to copy, \(size)").fontWeight(.semibold)
@@ -134,20 +201,20 @@ struct SummaryBarView: View {
                 }
             }
             HStack(spacing: 16) {
-                if let estimate {
-                    Label("Estimated time: about \(formatDuration(estimate)), based on the last measured speed", systemImage: "clock")
-                } else if plan.plannedCount > 0 {
-                    Label("Estimated time: measured during the first seconds of the export", systemImage: "clock")
+                if action == .copy {
+                    if let estimate {
+                        Label("Estimated time: about \(formatDuration(estimate)), based on the last measured speed", systemImage: "clock")
+                    } else if plan.plannedCount > 0 {
+                        Label("Estimated time: measured during the first seconds of the export", systemImage: "clock")
+                            .foregroundStyle(.secondary)
+                    }
+                    if isNetwork {
+                        Label("Network destination: each batch is prepared locally and uploaded once.", systemImage: "network")
+                            .foregroundStyle(.secondary)
+                    }
+                } else {
+                    Label("Photos already in the destination album are skipped; clones travel with their image.", systemImage: "info.circle")
                         .foregroundStyle(.secondary)
-                }
-                if isNetwork && !move {
-                    Label("Network destination: each batch is prepared locally and uploaded once.", systemImage: "network")
-                        .foregroundStyle(.secondary)
-                }
-                if move && plan.insideCatalogCount > 0 {
-                    Label("Moving photos stored inside the catalog bundle leaves them offline in Capture One.",
-                          systemImage: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.orange)
                 }
             }
         }
@@ -252,16 +319,18 @@ struct FooterView: View {
                 HStack(spacing: 12) {
                     Text("\(model.progressCompleted) of \(model.progressTotal)")
                         .monospacedDigit()
-                    Text(verbatim: model.bytesDone.formatted(.byteCount(style: .file)))
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
-                    if let throughput = model.throughput {
-                        Text("\(Int64(throughput).formatted(.byteCount(style: .file)))/s")
+                    if model.action == .copy {
+                        Text(verbatim: model.bytesDone.formatted(.byteCount(style: .file)))
                             .monospacedDigit()
-                    }
-                    if let remaining = model.estimatedRemainingSeconds {
-                        Text("about \(formatDuration(remaining)) remaining")
-                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                        if let throughput = model.throughput {
+                            Text("\(Int64(throughput).formatted(.byteCount(style: .file)))/s")
+                                .monospacedDigit()
+                        }
+                        if let remaining = model.estimatedRemainingSeconds {
+                            Text("about \(formatDuration(remaining)) remaining")
+                                .monospacedDigit()
+                        }
                     }
                     Text(verbatim: model.currentFile)
                         .foregroundStyle(.secondary)

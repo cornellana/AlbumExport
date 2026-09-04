@@ -16,12 +16,44 @@ conocimiento del esquema del catálogo y la estrategia de escritura de metadatos
 
 ## Uso
 
+La ventana pide primero **qué quieres hacer** y después solo los datos de esa acción:
+
+| Acción | Datos que pide | Botón |
+|---|---|---|
+| **Copy photos to a folder** | catálogo, álbumes (patrones o marcados), carpeta de destino | Export |
+| **Move albums to another catalog** | catálogo, álbumes, catálogo de destino (existente o nuevo) | Move |
+| **Verify catalog** | catálogo | Verify |
+
+Copiar:
+
 1. **Open Catalog…**: elige el bundle `.cocatalog`, o un `.cosessiondb` de una sesión.
 2. Escribe **patrones** de álbum con `*` y `?` separados por `;` (por ejemplo
    `Andorra 20??; Isla*`), o marca álbumes en la lista. Un patrón con `/` compara la ruta
    completa `Grupo/Álbum`.
-3. **Destination…**: carpeta de salida (no puede estar dentro del catálogo).
+3. **Destination folder**: carpeta de salida (no puede estar dentro del catálogo).
 4. Revisa el plan (recuento, tamaño, rating, color, keywords) y pulsa **Export**.
+
+## Mover álbumes a otro catálogo
+
+Traslada los álbumes seleccionados a otro catálogo de Capture One **con todo**: ajustes,
+capas, máscaras, retoque, rating, color, keywords e IPTC, recreando el grupo y el álbum.
+No borra nada del catálogo de origen (eso queda como acción manual en Capture One).
+
+Cómo funciona (validado en `docs/estudio-mover-entre-catalogos.md`):
+
+- La app abre Capture One y los dos catálogos (o crea el de destino con
+  *Create new…*). Requiere Capture One Pro y, la primera vez, aceptar el permiso de
+  automatización que pide macOS.
+- Por lotes de 20 fotos, exporta los originales con `export originals`: los RAW (ARW,
+  DNG, NEF, RW2…) empaquetados en **EIP**, que contiene el original, todas las variantes,
+  máscaras y metadatos; JPG, TIF y demás con el `.cos` lateral. Luego los importa en el
+  destino con los ajustes, añade las variantes al álbum y relee rating, color y keywords
+  para verificar.
+- **Clones**: cada EIP lleva todas las variantes de la imagen, así que se exporta una sola
+  vez por imagen y en el destino aparece con sus clones.
+- **Álbum existente**: si el álbum ya existe en el destino se añade a él; las fotos que ya
+  contiene (mismo nombre) se omiten, lo que permite reanudar.
+- Informe `AlbumExport_transfer_<fecha>.csv` junto al catálogo de destino.
 
 Salida:
 

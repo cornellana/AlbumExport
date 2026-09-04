@@ -285,14 +285,35 @@ final class CatalogReader: @unchecked Sendable {
 
     // MARK: - Verificación
 
-    private func allImageLocations() throws -> [(filename: String, relative: Bool, root: String?, path: String?)] {
-        try db.query("""
-            SELECT i.ZIMAGEFILENAME AS f, p.ZISRELATIVE AS rel, p.ZMACROOT AS root, p.ZRELATIVEPATH AS path
+    private struct ImageLocation {
+        let id: Int
+        let filename: String
+        let relative: Bool
+        let root: String?
+        let path: String?
+        let size: Int64?
+    }
+
+    private func allImageLocations() throws -> [ImageLocation] {
+        let hasSize = db.columns(of: "ZIMAGE").contains("ZFILE_SIZE")
+        return try db.query("""
+            SELECT i.Z_PK AS pk, i.ZIMAGEFILENAME AS f, \(hasSize ? "i.ZFILE_SIZE" : "NULL") AS size,
+                   p.ZISRELATIVE AS rel, p.ZMACROOT AS root, p.ZRELATIVEPATH AS path
             FROM ZIMAGE i LEFT JOIN ZPATHLOCATION p ON p.Z_PK = i.ZIMAGELOCATION
             """).compactMap { row in
-            guard let f = row.string("f") else { return nil }
-            return (f, row.bool("rel"), row.string("root"), row.string("path"))
+            guard let pk = row.int("pk"), let f = row.string("f") else { return nil }
+            return ImageLocation(id: pk, filename: f, relative: row.bool("rel"), root: row.string("root"), path: row.string("path"),
+                                 size: row.int("size").map(Int64.init))
         }
+    }
+
+    private func expectedURL(_ loc: ImageLocation) -> URL? {
+        guard let path = loc.path else { return nil }
+        if loc.relative {
+            return rootURL.appendingPathComponent(path).appendingPathComponent(loc.filename)
+        }
+        let trimmed = path.hasPrefix("/") ? String(path.dropFirst()) : path
+        return URL(fileURLWithPath: loc.root ?? "/").appendingPathComponent(trimmed).appendingPathComponent(loc.filename)
     }
 
     /// Rutas relativas al bundle (en minúsculas) de todos los originales que el índice
@@ -310,21 +331,30 @@ final class CatalogReader: @unchecked Sendable {
     func missingFiles() throws -> [MissingFile] {
         var missing: [MissingFile] = []
         for loc in try allImageLocations() {
-            let url: URL
-            if loc.relative, let path = loc.path {
-                url = rootURL.appendingPathComponent(path).appendingPathComponent(loc.filename)
-            } else if let path = loc.path {
-                let trimmed = path.hasPrefix("/") ? String(path.dropFirst()) : path
-                url = URL(fileURLWithPath: loc.root ?? "/").appendingPathComponent(trimmed).appendingPathComponent(loc.filename)
-            } else {
-                missing.append(MissingFile(filename: loc.filename, expectedPath: "?"))
+            guard let url = expectedURL(loc) else {
+                missing.append(MissingFile(imageID: loc.id, filename: loc.filename, expectedPath: "?", size: loc.size))
                 continue
             }
             if !FileManager.default.fileExists(atPath: url.path) {
-                missing.append(MissingFile(filename: loc.filename, expectedPath: url.path))
+                missing.append(MissingFile(imageID: loc.id, filename: loc.filename, expectedPath: url.path, size: loc.size))
             }
         }
         return missing.sorted { $0.expectedPath < $1.expectedPath }
+    }
+
+    /// Imágenes del índice que no están en ningún álbum de usuario (ni en la papelera).
+    func imagesNotInAnyAlbum() throws -> [UnfiledImage] {
+        guard let albumEnt = entities["AlbumCollection"] else { return [] }
+        let trashed = db.columns(of: "ZIMAGE").contains("ZISTRASHED") ? "AND IFNULL(i.ZISTRASHED, 0) = 0" : ""
+        let rows = try db.query("""
+            SELECT i.Z_PK AS pk FROM ZIMAGE i
+            WHERE NOT EXISTS (SELECT 1 FROM ZIMAGEINCOLLECTION ic JOIN ZCOLLECTION c ON c.Z_PK = ic.ZCOLLECTION
+                              WHERE ic.ZIMAGE = i.Z_PK AND c.Z_ENT = ?) \(trashed)
+            """, [albumEnt])
+        let ids = Set(rows.compactMap { $0.int("pk") })
+        return try allImageLocations().filter { ids.contains($0.id) }
+            .map { UnfiledImage(imageID: $0.id, filename: $0.filename, path: expectedURL($0)?.path ?? "?") }
+            .sorted { $0.path < $1.path }
     }
 
     // MARK: - Keywords

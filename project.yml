@@ -16,9 +16,12 @@ targets:
       path: AlbumExport/AlbumExport.entitlements
       properties:
         com.apple.security.app-sandbox: false
+        # Necesario con hardened runtime para enviar Apple events a Capture One.
+        com.apple.security.automation.apple-events: true
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_NSAppleEventsUsageDescription: "Album Export drives Capture One to move albums between catalogs."
         INFOPLIST_KEY_CFBundleDisplayName: Album Export
         INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.photography
         INFOPLIST_KEY_NSHumanReadableCopyright: "© 2026 Francisco Cornellana"

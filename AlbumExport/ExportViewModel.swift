@@ -1,6 +1,7 @@
 import AppKit
 import Foundation
 import Observation
+import UniformTypeIdentifiers
 
 /// Estado de la ventana principal: catálogo abierto, selección, plan y progreso.
 @MainActor
@@ -13,11 +14,16 @@ final class ExportViewModel {
     private(set) var catalogVersion: CatalogVersion?
     private(set) var catalogWarnings: [String] = []
 
-    // MARK: Selección
+    // MARK: Acción y selección
+    /// Acción elegida; la interfaz solo pide los datos que esa acción necesita.
+    var action: AppAction = .copy
     var patternsText = ""
     var selectedAlbumIDs: Set<Int> = []
     var albumFilter = ""
+    /// Carpeta de salida (modo Copy).
     var destinationURL: URL?
+    /// Catálogo de destino (modo Move): puede no existir todavía; la app lo creará.
+    var destinationCatalogURL: URL?
     var options = ExportOptions()
 
     // MARK: Plan y ejecución
@@ -60,14 +66,27 @@ final class ExportViewModel {
             }
         }
         // Argumentos de línea de comandos (útil para automatizar y para pruebas):
-        //   AlbumExport <catálogo> [<destino>] [<patrones separados por ;>] [--run] [--quit]
+        //   AlbumExport <catálogo> [<destino>] [<patrones separados por ;>] [--move-to <catálogo>] [--run] [--quit]
         // --run lanza la exportación en cuanto el plan está listo; --quit cierra la app al acabar.
-        autoRun = CommandLine.arguments.contains("--run")
-        autoQuit = CommandLine.arguments.contains("--quit")
-        let arguments = CommandLine.arguments.dropFirst().filter { !$0.hasPrefix("-") }
-        if let catalogPath = arguments.first, FileManager.default.fileExists(atPath: catalogPath) {
-            if arguments.count > 1 { destinationURL = URL(fileURLWithPath: arguments[arguments.startIndex + 1]) }
-            if arguments.count > 2 { patternsText = arguments[arguments.startIndex + 2] }
+        let all = CommandLine.arguments.dropFirst()
+        autoRun = all.contains("--run")
+        autoQuit = all.contains("--quit")
+        if let i = all.firstIndex(of: "--move-to"), all.indices.contains(i + 1) {
+            destinationCatalogURL = URL(fileURLWithPath: all[i + 1])
+            options.move = true
+            action = .move
+        }
+        var positional: [String] = []
+        var skipNext = false
+        for arg in all {
+            if skipNext { skipNext = false; continue }
+            if arg == "--move-to" { skipNext = true; continue }
+            if arg.hasPrefix("-") { continue }
+            positional.append(arg)
+        }
+        if let catalogPath = positional.first, FileManager.default.fileExists(atPath: catalogPath) {
+            if positional.count > 1 { destinationURL = URL(fileURLWithPath: positional[1]) }
+            if positional.count > 2 { patternsText = positional[2] }
             open(URL(fileURLWithPath: catalogPath))
         } else {
             restoreLastSession()
@@ -79,6 +98,7 @@ final class ExportViewModel {
     private enum Keys {
         static let catalog = "lastCatalogPath"
         static let destination = "lastDestinationPath"
+        static let destinationCatalog = "lastDestinationCatalogPath"
         static let patterns = "lastPatterns"
         static let selectedAlbums = "lastSelectedAlbumPaths"
         static let options = "lastOptions"
@@ -87,16 +107,19 @@ final class ExportViewModel {
     /// Rutas de los álbumes marcados en la sesión anterior, pendientes de resolver al abrir el catálogo.
     private var pendingSelectedAlbumPaths: [String]?
 
-    /// Al arrancar sin argumentos, se recupera lo último usado: catálogo, patrones, álbumes, destino y opciones.
+    /// Al arrancar sin argumentos, se recupera lo último usado: catálogo, patrones, álbumes, destinos y opciones.
     private func restoreLastSession() {
         let defaults = UserDefaults.standard
         patternsText = defaults.string(forKey: Keys.patterns) ?? ""
         if let data = defaults.data(forKey: Keys.options), let saved = try? JSONDecoder().decode(ExportOptions.self, from: data) {
             options = saved
-            options.move = false   // mover nunca se restaura por defecto: es la acción peligrosa
+            action = saved.move ? .move : .copy
         }
         if let path = defaults.string(forKey: Keys.destination), FileManager.default.fileExists(atPath: path) {
             destinationURL = URL(fileURLWithPath: path)
+        }
+        if let path = defaults.string(forKey: Keys.destinationCatalog) {
+            destinationCatalogURL = URL(fileURLWithPath: path)
         }
         pendingSelectedAlbumPaths = defaults.stringArray(forKey: Keys.selectedAlbums)
         if let path = defaults.string(forKey: Keys.catalog), FileManager.default.fileExists(atPath: path) {
@@ -109,10 +132,13 @@ final class ExportViewModel {
         let defaults = UserDefaults.standard
         defaults.set(catalogURL?.path, forKey: Keys.catalog)
         defaults.set(destinationURL?.path, forKey: Keys.destination)
+        defaults.set(destinationCatalogURL?.path, forKey: Keys.destinationCatalog)
         defaults.set(patternsText, forKey: Keys.patterns)
         defaults.set(albums.filter { selectedAlbumIDs.contains($0.id) }.map(\.path), forKey: Keys.selectedAlbums)
         defaults.set(try? JSONEncoder().encode(options), forKey: Keys.options)
     }
+
+    // MARK: - Derivados
 
     var patterns: [String] { PatternMatcher.parse(patternsText) }
 
@@ -128,9 +154,17 @@ final class ExportViewModel {
         }
     }
 
+    /// `true` si el catálogo abierto es un catálogo (no una sesión): solo entonces se puede trasladar.
+    var sourceIsCatalog: Bool {
+        catalogURL?.pathExtension.lowercased() == "cocatalog"
+    }
+
     var canExport: Bool {
-        !isRunning && worker != nil && destinationURL != nil && (plan?.plannedCount ?? 0) > 0
-            && (!options.writeMetadata || exiftoolURL != nil)
+        guard !isRunning, worker != nil, (plan?.plannedCount ?? 0) > 0 else { return false }
+        if options.move {
+            return destinationCatalogURL != nil && sourceIsCatalog
+        }
+        return destinationURL != nil && (!options.writeMetadata || exiftoolURL != nil)
     }
 
     /// `true` si el destino elegido está en un volumen de red.
@@ -140,7 +174,7 @@ final class ExportViewModel {
 
     /// Segundos que faltan, según la velocidad medida ahora o la de la última ejecución.
     var estimatedRemainingSeconds: TimeInterval? {
-        guard let plan else { return nil }
+        guard let plan, !options.move else { return nil }
         if isRunning {
             guard let throughput, throughput > 0 else { return nil }
             return Double(max(plan.totalBytes - bytesDone, 0)) / throughput
@@ -190,7 +224,12 @@ final class ExportViewModel {
         }
     }
 
+    /// Destino según el modo: carpeta (Copy) o catálogo existente (Move).
     func chooseDestination() {
+        if options.move { chooseDestinationCatalog() } else { chooseDestinationFolder() }
+    }
+
+    private func chooseDestinationFolder() {
         let panel = NSOpenPanel()
         panel.title = String(localized: "Choose the destination folder", comment: "Título del diálogo de destino")
         panel.canChooseFiles = false
@@ -204,6 +243,37 @@ final class ExportViewModel {
         }
         destinationURL = url
         refreshPlan()   // el manifiesto del nuevo destino decide qué está ya exportado
+    }
+
+    private func chooseDestinationCatalog() {
+        let panel = NSOpenPanel()
+        panel.title = String(localized: "Choose the destination catalog", comment: "Título del diálogo de catálogo destino")
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = false
+        panel.treatsFilePackagesAsDirectories = false
+        if let type = UTType(filenameExtension: "cocatalog") { panel.allowedContentTypes = [type] }
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        setDestinationCatalog(url)
+    }
+
+    /// Pide nombre y carpeta para un catálogo nuevo; se creará al exportar.
+    func createDestinationCatalog() {
+        let panel = NSSavePanel()
+        panel.title = String(localized: "New destination catalog", comment: "Título del diálogo de catálogo nuevo")
+        panel.nameFieldStringValue = String(localized: "New catalog", comment: "Nombre por defecto del catálogo nuevo")
+        panel.canCreateDirectories = true
+        guard panel.runModal() == .OK, var url = panel.url else { return }
+        if url.pathExtension.lowercased() != "cocatalog" { url = url.appendingPathExtension("cocatalog") }
+        setDestinationCatalog(url)
+    }
+
+    private func setDestinationCatalog(_ url: URL) {
+        if url.standardizedFileURL == catalogURL?.standardizedFileURL {
+            errorMessage = String(localized: "The destination catalog must be different from the source catalog.", comment: "Error de destino")
+            return
+        }
+        destinationCatalogURL = url
+        refreshPlan()
     }
 
     func toggleAlbum(_ album: Album) {
@@ -227,7 +297,7 @@ final class ExportViewModel {
         let selected = selectedAlbumIDs
         let albums = albums
         let options = options
-        let destination = destinationURL
+        let destination = options.move ? nil : destinationURL
         isPlanning = true
         Task {
             do {
@@ -248,19 +318,33 @@ final class ExportViewModel {
 
     // MARK: - Ejecución
 
-    /// Punto de entrada del botón Exportar: mover pide confirmación explícita.
+    /// Al cambiar de acción: sincroniza el modo y recalcula el plan.
+    func actionChanged() {
+        options.move = action == .move
+        if action == .verify { showVerify = false }
+        refreshPlan()
+    }
+
+    /// Botón principal según la acción: verificar, trasladar (con confirmación) o copiar.
+    var canRunAction: Bool {
+        action == .verify ? (worker != nil && !isRunning && !isVerifying) : canExport
+    }
+
     func requestExport() {
-        guard canExport else { return }
-        if options.move {
+        switch action {
+        case .verify:
+            verifyCatalog()
+        case .move:
+            guard canExport else { return }
             showMoveConfirmation = true
-        } else {
+        case .copy:
+            guard canExport else { return }
             runExport()
         }
     }
 
     func runExport() {
-        guard let worker, let destination = destinationURL, plan != nil else { return }
-        let writer = options.writeMetadata ? exiftoolURL.map { ExifToolWriter(executable: $0) } : nil
+        guard let worker, plan != nil else { return }
         let options = options
         let patterns = patterns
         let selected = selectedAlbumIDs
@@ -277,15 +361,25 @@ final class ExportViewModel {
         bytesTransferred = 0
         throughput = nil
         startDate = Date()
+        let folder = destinationURL
+        let catalog = destinationCatalogURL
+        let writer = options.writeMetadata ? exiftoolURL.map { ExifToolWriter(executable: $0) } : nil
         Task {
             do {
                 // Siempre se parte de un plan recién calculado contra el destino actual: así una
                 // ejecución anterior (a otro destino, o con errores) no deja estados heredados.
-                var plan = try await worker.plan(patterns: patterns, selectedAlbumIDs: selected, albums: albums, options: options, destination: destination)
+                var plan = try await worker.plan(patterns: patterns, selectedAlbumIDs: selected, albums: albums, options: options,
+                                                 destination: options.move ? nil : folder)
                 self.plan = plan
                 progressTotal = plan.plannedCount
-                let result = try await worker.export(plan: plan, destination: destination, options: options, writer: writer, cancellation: token) { event in
-                    Task { @MainActor in self.handle(event) }
+                let events: @Sendable (ExportEvent) -> Void = { event in Task { @MainActor in self.handle(event) } }
+                let result: (jobs: [ExportJob], summary: ExportSummary)
+                if options.move, let catalog {
+                    result = try await worker.transfer(plan: plan, destinationCatalog: catalog, cancellation: token, events: events)
+                } else if let folder {
+                    result = try await worker.export(plan: plan, destination: folder, options: options, writer: writer, cancellation: token, events: events)
+                } else {
+                    return
                 }
                 plan.jobs = result.jobs
                 plan.recount()
@@ -294,6 +388,8 @@ final class ExportViewModel {
                 rememberThroughput(bytes: result.summary.bytesTransferred)
             } catch {
                 errorMessage = error.localizedDescription
+                // En modo automático no hay nadie mirando la ventana: también por stderr.
+                FileHandle.standardError.write(Data("AlbumExport error: \(error.localizedDescription)\n".utf8))
             }
             isRunning = false
             cancellation = nil
@@ -320,11 +416,12 @@ final class ExportViewModel {
             }
         case .log(let line):
             logLines.append(line)
+            if autoQuit { FileHandle.standardError.write(Data("AlbumExport: \(line)\n".utf8)) }
         case .status(let jobID, let status, let destination):
             // Refleja en la tabla el estado de cada foto según avanza (atenuado al completarse).
             if let index = plan?.jobs.firstIndex(where: { $0.id == jobID }) {
                 plan?.jobs[index].status = status
-                plan?.jobs[index].destination = destination
+                if let destination { plan?.jobs[index].destination = destination }
             }
         }
     }
@@ -344,15 +441,16 @@ final class ExportViewModel {
     private(set) var isVerifying = false
     var showVerify = false
     var showMoveOrphansConfirmation = false
+    var showRestoreConfirmation = false
     private(set) var orphanTargetFolder: URL?
-    private(set) var orphanMoveSummary: String?
+    private(set) var verifyMessage: String?
 
-    /// Compara `Originals/` con el índice: huérfanos en disco y ficheros ausentes.
+    /// Compara `Originals/` con el índice: huérfanos en disco, ficheros ausentes y fotos sin álbum.
     func verifyCatalog() {
         guard let worker, !isVerifying else { return }
         isVerifying = true
         verifyResult = nil
-        orphanMoveSummary = nil
+        verifyMessage = nil
         showVerify = true
         Task {
             do {
@@ -387,10 +485,49 @@ final class ExportViewModel {
         Task {
             let errors = await worker.moveOrphans(result.orphans, to: folder)
             let moved = result.orphans.count - errors.count
-            orphanMoveSummary = String(localized: "Orphans moved: \(moved), errors: \(errors.count)", comment: "Resumen tras mover huérfanos")
-            let reportURL = folder.appendingPathComponent("AlbumExport_orphans.csv")
-            try? CatalogVerifier.writeReport(result, catalogName: catalogURL?.lastPathComponent ?? "", to: reportURL)
+            verifyMessage = String(localized: "Orphans moved: \(moved), errors: \(errors.count)", comment: "Resumen tras mover huérfanos")
+            try? CatalogVerifier.writeReport(result, catalogName: catalogURL?.lastPathComponent ?? "", to: folder.appendingPathComponent("AlbumExport_orphans.csv"))
             // Volver a escanear para reflejar el estado real tras el movimiento.
+            if let refreshed = try? await worker.verify() { verifyResult = refreshed }
+            isVerifying = false
+        }
+    }
+
+    /// Busca los ficheros ausentes en una carpeta (o en todo el disco con Spotlight).
+    func searchMissing(wholeDisk: Bool) {
+        guard let worker, let result = verifyResult, !result.missing.isEmpty else { return }
+        var folder: URL?
+        if !wholeDisk {
+            let panel = NSOpenPanel()
+            panel.title = String(localized: "Choose the folder to search for the missing files", comment: "Título del diálogo de búsqueda")
+            panel.canChooseFiles = false
+            panel.canChooseDirectories = true
+            guard panel.runModal() == .OK, let url = panel.url else { return }
+            folder = url
+        }
+        isVerifying = true
+        Task {
+            let updated = await worker.searchMissing(result.missing, in: folder)
+            verifyResult?.missing = updated
+            let found = updated.filter { $0.candidate != nil }.count
+            verifyMessage = String(localized: "Found \(found) of \(updated.count) missing files", comment: "Resumen de búsqueda")
+            isVerifying = false
+        }
+    }
+
+    func requestRestore() {
+        guard (verifyResult?.foundCount ?? 0) > 0 else { return }
+        showRestoreConfirmation = true
+    }
+
+    /// Copia los ficheros encontrados a la ruta que el catálogo espera.
+    func restoreMissing() {
+        guard let worker, let result = verifyResult else { return }
+        isVerifying = true
+        Task {
+            let errors = await worker.restoreMissing(result.missing)
+            let restored = result.foundCount - errors.count
+            verifyMessage = String(localized: "Files restored: \(restored), errors: \(errors.count)", comment: "Resumen tras restaurar")
             if let refreshed = try? await worker.verify() { verifyResult = refreshed }
             isVerifying = false
         }
@@ -408,13 +545,15 @@ final class ExportViewModel {
         }
     }
 
+    // MARK: - Finder
+
     func revealReport() {
         guard let url = summary?.reportURL else { return }
         NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 
     func revealDestination() {
-        guard let url = destinationURL else { return }
+        guard let url = options.move ? destinationCatalogURL : destinationURL else { return }
         NSWorkspace.shared.activateFileViewerSelecting([url])
     }
 }

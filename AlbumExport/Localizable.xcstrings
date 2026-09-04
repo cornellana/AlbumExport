@@ -49,6 +49,22 @@
         }
       }
     },
+    "%lld photos already in %@: adding them to the album without re-importing.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld fotos ja són a %@: s'afegeixen a l'àlbum sense tornar-les a importar."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld fotos ya están en %@: se añaden al álbum sin volver a importarlas."
+          }
+        }
+      }
+    },
     "%lld photos to copy, %@": {
       "localizations": {
         "ca": {
@@ -77,6 +93,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld fotos a mover, %@"
+          }
+        }
+      }
+    },
+    "(will be created)": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(es crearà)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(se creará)"
           }
         }
       }
@@ -157,6 +189,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Patrones de álbum"
+          }
+        }
+      }
+    },
+    "Albums": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Àlbums"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Álbumes"
+          }
+        }
+      }
+    },
+    "Albums are not needed": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No calen àlbums"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No hacen falta álbumes"
           }
         }
       }
@@ -305,6 +369,70 @@
         }
       }
     },
+    "Capture One did not open the catalog %@.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture One no ha obert el catàleg %@."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture One no ha abierto el catálogo %@."
+          }
+        }
+      }
+    },
+    "Capture One error: %@": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Error de Capture One: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Error de Capture One: %@"
+          }
+        }
+      }
+    },
+    "Capture One is not installed.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture One no està instal·lat."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture One no está instalado."
+          }
+        }
+      }
+    },
+    "Capture One will export each photo with its adjustments and import it into the destination catalog, recreating groups and albums. Nothing is deleted from the source catalog.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture One exportarà cada foto amb els seus ajustos i la importarà al catàleg de destinació, recreant grups i àlbums. No s'esborra res del catàleg d'origen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture One exportará cada foto con sus ajustes y la importará en el catálogo de destino, recreando grupos y álbumes. No se borra nada del catálogo de origen."
+          }
+        }
+      }
+    },
     "Catalog": {
       "localizations": {
         "ca": {
@@ -369,6 +497,38 @@
         }
       }
     },
+    "Choose existing…": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tria un d'existent…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elegir existente…"
+          }
+        }
+      }
+    },
+    "Choose the destination catalog": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tria el catàleg de destinació"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elige el catálogo de destino"
+          }
+        }
+      }
+    },
     "Choose the destination folder": {
       "localizations": {
         "ca": {
@@ -381,6 +541,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Elige la carpeta de destino"
+          }
+        }
+      }
+    },
+    "Choose the folder to search for the missing files": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tria la carpeta on cercar els fitxers absents"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elige la carpeta donde buscar los ficheros ausentes"
           }
         }
       }
@@ -413,6 +589,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Elige dónde mover los ficheros huérfanos"
+          }
+        }
+      }
+    },
+    "Choose…": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tria…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elegir…"
           }
         }
       }
@@ -481,6 +673,22 @@
         }
       }
     },
+    "Compares the Originals folder with the index: orphan files, missing files and photos that belong to no album.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compara la carpeta Originals amb l'índex: fitxers orfes, fitxers absents i fotos que no són a cap àlbum."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compara la carpeta Originals con el índice: ficheros huérfanos, ficheros ausentes y fotos que no están en ningún álbum."
+          }
+        }
+      }
+    },
     "Copied": {
       "localizations": {
         "ca": {
@@ -493,6 +701,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Copiada"
+          }
+        }
+      }
+    },
+    "Copies the originals of the matching albums to a folder and writes rating, color, keywords and IPTC into each file (XMP).": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copia els originals dels àlbums seleccionats a una carpeta i escriu valoració, color, paraules clau i IPTC a cada fitxer (XMP)."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copia los originales de los álbumes seleccionados a una carpeta y escribe rating, color, keywords e IPTC en cada fichero (XMP)."
           }
         }
       }
@@ -513,6 +737,54 @@
         }
       }
     },
+    "Copy photos to a folder": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copia fotos a una carpeta"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copiar fotos a una carpeta"
+          }
+        }
+      }
+    },
+    "Create new…": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crea'n un de nou…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crear nuevo…"
+          }
+        }
+      }
+    },
+    "Creating catalog %@…": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Creant el catàleg %@…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Creando el catálogo %@…"
+          }
+        }
+      }
+    },
     "Destination": {
       "localizations": {
         "ca": {
@@ -525,6 +797,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Destino"
+          }
+        }
+      }
+    },
+    "Destination catalog": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Catàleg de destinació"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Catálogo de destino"
+          }
+        }
+      }
+    },
+    "Destination folder": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carpeta de destinació"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carpeta de destino"
           }
         }
       }
@@ -589,6 +893,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Correcta (sin metadatos)"
+          }
+        }
+      }
+    },
+    "Each file is copied to the location the catalog expects. Existing files are never overwritten.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cada fitxer es copia a la ubicació que el catàleg espera. Mai se sobreescriuen fitxers existents."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cada fichero se copia a la ubicación que el catálogo espera. Nunca se sobrescriben ficheros existentes."
           }
         }
       }
@@ -673,6 +993,22 @@
         }
       }
     },
+    "Every photo is in an album": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Totes les fotos són en algun àlbum"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todas las fotos están en algún álbum"
+          }
+        }
+      }
+    },
     "Expected location": {
       "localizations": {
         "ca": {
@@ -737,6 +1073,22 @@
         }
       }
     },
+    "Exporting %lld photos from %@…": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exportant %lld fotos de %@…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exportando %lld fotos de %@…"
+          }
+        }
+      }
+    },
     "Failed to copy %@: %@": {
       "localizations": {
         "ca": {
@@ -785,6 +1137,22 @@
         }
       }
     },
+    "Files restored: %lld, errors: %lld": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fitxers restaurats: %lld, errors: %lld"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ficheros restaurados: %lld, errores: %lld"
+          }
+        }
+      }
+    },
     "Filter albums": {
       "localizations": {
         "ca": {
@@ -817,6 +1185,38 @@
         }
       }
     },
+    "Found %lld of %lld missing files": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trobats %lld de %lld fitxers absents"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encontrados %lld de %lld ficheros ausentes"
+          }
+        }
+      }
+    },
+    "Found at": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trobat a"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encontrado en"
+          }
+        }
+      }
+    },
     "Green": {
       "localizations": {
         "ca": {
@@ -829,6 +1229,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Verde"
+          }
+        }
+      }
+    },
+    "Importing %lld photos into %@…": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Important %lld fotos a %@…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importando %lld fotos en %@…"
           }
         }
       }
@@ -913,6 +1329,22 @@
         }
       }
     },
+    "Matches by file name and size. Restoring copies each found file to the location the catalog expects.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aparella per nom i mida. Restaurar copia cada fitxer trobat a la ubicació que el catàleg espera."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Empareja por nombre y tamaño. Restaurar copia cada fichero encontrado a la ubicación que el catálogo espera."
+          }
+        }
+      }
+    },
     "Metadata": {
       "localizations": {
         "ca": {
@@ -993,6 +1425,54 @@
         }
       }
     },
+    "Move %lld photos to %@?": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vols moure %lld fotos a %@?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Mover %lld fotos a %@?"
+          }
+        }
+      }
+    },
+    "Move albums": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mou els àlbums"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mover álbumes"
+          }
+        }
+      }
+    },
+    "Move albums to another catalog": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mou àlbums a un altre catàleg"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mover álbumes a otro catálogo"
+          }
+        }
+      }
+    },
     "Move files": {
       "localizations": {
         "ca": {
@@ -1069,6 +1549,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Destino en red: cada lote se prepara en local y se sube una sola vez."
+          }
+        }
+      }
+    },
+    "New catalog": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Catàleg nou"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Catálogo nuevo"
+          }
+        }
+      }
+    },
+    "New destination catalog": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nou catàleg de destinació"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nuevo catálogo de destino"
           }
         }
       }
@@ -1201,6 +1713,54 @@
         }
       }
     },
+    "Not found in the destination catalog after import": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No apareix al catàleg de destinació després d'importar"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No aparece en el catálogo de destino tras importar"
+          }
+        }
+      }
+    },
+    "Not in any album": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sense àlbum"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin álbum"
+          }
+        }
+      }
+    },
+    "Not in any album: %lld": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sense àlbum: %lld"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin álbum: %lld"
+          }
+        }
+      }
+    },
     "OK": {
       "localizations": {
         "ca": {
@@ -1229,6 +1789,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Catálogo antiguo: los metadatos efectivos se fusionarán de las capas de ajuste y por defecto."
+          }
+        }
+      }
+    },
+    "Only catalogs can be moved to another catalog, not sessions.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Només es poden moure catàlegs a un altre catàleg, no sessions."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo se pueden mover catálogos a otro catálogo, no sesiones."
           }
         }
       }
@@ -1281,6 +1857,38 @@
         }
       }
     },
+    "Open a Capture One catalog to verify it.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obre un catàleg de Capture One per verificar-lo."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abre un catálogo de Capture One para verificarlo."
+          }
+        }
+      }
+    },
+    "Opening Capture One and both catalogs…": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Obrint Capture One i els dos catàlegs…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abriendo Capture One y los dos catálogos…"
+          }
+        }
+      }
+    },
     "Orange": {
       "localizations": {
         "ca": {
@@ -1309,6 +1917,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ficheros huérfanos"
+          }
+        }
+      }
+    },
+    "Orphans are files inside Originals that the index does not know. Moving them keeps the folder structure so they can be imported again.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Els orfes són fitxers dins d'Originals que l'índex no coneix. En moure'ls es conserva l'estructura de carpetes per poder-los importar de nou."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los huérfanos son ficheros dentro de Originals que el índice no conoce. Al moverlos se conserva la estructura de carpetas para poder importarlos de nuevo."
           }
         }
       }
@@ -1377,6 +2001,22 @@
         }
       }
     },
+    "Photos already in the destination album are skipped; clones travel with their image.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les fotos que ja són a l'àlbum de destinació s'ometen; els clons viatgen amb la seva imatge."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Las fotos que ya están en el álbum de destino se omiten; los clones viajan con su imagen."
+          }
+        }
+      }
+    },
     "Photos stored inside the catalog bundle will become offline in Capture One. This cannot be undone from this app.": {
       "localizations": {
         "ca": {
@@ -1389,6 +2029,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Las fotos guardadas dentro del bundle del catálogo quedarán offline en Capture One. Esto no se puede deshacer desde esta app."
+          }
+        }
+      }
+    },
+    "Photos that are in the catalog index but in no user album. They are still part of the catalog; this list is informative.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotos que són a l'índex però a cap àlbum d'usuari. Continuen formant part del catàleg; aquesta llista és informativa."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotos que están en el índice pero en ningún álbum de usuario. Siguen formando parte del catálogo; esta lista es informativa."
           }
         }
       }
@@ -1421,6 +2077,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Planificando…"
+          }
+        }
+      }
+    },
+    "Press Verify to compare the Originals folder with the catalog index.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prem Verifica per comparar la carpeta Originals amb l'índex del catàleg."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pulsa Verificar para comparar la carpeta Originals con el índice del catálogo."
           }
         }
       }
@@ -1473,6 +2145,22 @@
         }
       }
     },
+    "Ready to verify": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A punt per verificar"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listo para verificar"
+          }
+        }
+      }
+    },
     "Red": {
       "localizations": {
         "ca": {
@@ -1521,6 +2209,54 @@
         }
       }
     },
+    "Restore": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restaura"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restaurar"
+          }
+        }
+      }
+    },
+    "Restore %lld found files into the catalog?": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vols restaurar %lld fitxers trobats al catàleg?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Restaurar %lld ficheros encontrados en el catálogo?"
+          }
+        }
+      }
+    },
+    "Restore found files into the catalog": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restaura els trobats al catàleg"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restaurar los encontrados en el catálogo"
+          }
+        }
+      }
+    },
     "Run Export again to resume; finished photos are kept.": {
       "localizations": {
         "ca": {
@@ -1565,6 +2301,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Guardar informe…"
+          }
+        }
+      }
+    },
+    "Search in folder…": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca en una carpeta…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscar en carpeta…"
+          }
+        }
+      }
+    },
+    "Search whole disk (Spotlight)": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca a tot el disc (Spotlight)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscar en todo el disco (Spotlight)"
           }
         }
       }
@@ -1713,6 +2481,22 @@
         }
       }
     },
+    "The destination catalog must be different from the source catalog.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El catàleg de destinació ha de ser diferent del d'origen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El catálogo de destino debe ser distinto del de origen."
+          }
+        }
+      }
+    },
     "They will be moved to %@ keeping their folder structure, so they can be imported again.": {
       "localizations": {
         "ca": {
@@ -1745,6 +2529,54 @@
         }
       }
     },
+    "Timed out waiting for Capture One: %@": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "S'ha esgotat el temps d'espera amb Capture One: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tiempo de espera agotado con Capture One: %@"
+          }
+        }
+      }
+    },
+    "Transfers the matching albums, with all adjustments, layers, masks and metadata, into another catalog using Capture One. Nothing is deleted from the source.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trasllada els àlbums seleccionats, amb tots els ajustos, capes, màscares i metadades, a un altre catàleg fent servir Capture One. No s'esborra res de l'origen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Traslada los álbumes seleccionados, con todos sus ajustes, capas, máscaras y metadatos, a otro catálogo usando Capture One. No se borra nada del origen."
+          }
+        }
+      }
+    },
+    "Type a pattern or tick albums in the sidebar": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escriu un patró o marca àlbums a la barra lateral"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Escribe un patrón o marca álbumes en la barra lateral"
+          }
+        }
+      }
+    },
     "Use * and ? as wildcards. Separate patterns with ;": {
       "localizations": {
         "ca": {
@@ -1761,6 +2593,22 @@
         }
       }
     },
+    "Verification checks the whole catalog.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La verificació revisa tot el catàleg."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La verificación revisa el catálogo entero."
+          }
+        }
+      }
+    },
     "Verify": {
       "localizations": {
         "ca": {
@@ -1773,6 +2621,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Verificar"
+          }
+        }
+      }
+    },
+    "Verify again": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verifica de nou"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verificar de nuevo"
+          }
+        }
+      }
+    },
+    "Verify catalog": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verifica el catàleg"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verificar catálogo"
           }
         }
       }
@@ -1821,6 +2701,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Versión"
+          }
+        }
+      }
+    },
+    "What do you want to do?": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Què vols fer?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Qué quieres hacer?"
           }
         }
       }
@@ -1949,6 +2845,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "No se encuentra exiftool. Instálalo con Homebrew: brew install exiftool"
+          }
+        }
+      }
+    },
+    "export of %lld files (e.g. %@)": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "exportació de %lld fitxers (p. ex. %@)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "exportación de %lld ficheros (p. ej. %@)"
+          }
+        }
+      }
+    },
+    "import into %@": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "importació a %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "importación en %@"
           }
         }
       }

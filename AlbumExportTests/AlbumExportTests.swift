@@ -246,6 +246,60 @@ struct FixtureCatalog {
     #expect(try CatalogVerifier.scan(catalog: reader).orphans.isEmpty)
 }
 
+/// Búsqueda de perdidos por nombre y tamaño en una carpeta, y restauración a la ruta esperada.
+@Test func findsAndRestoresMissingFiles() throws {
+    let fixture = try FixtureCatalog()
+    defer { fixture.cleanup() }
+    let reader = try CatalogReader(url: fixture.bundle)
+    let missing = try reader.missingFiles()
+    #expect(missing.map(\.filename) == ["MISSING.jpg"])
+
+    // Un candidato con el nombre correcto fuera del catálogo.
+    let elsewhere = fixture.root.appendingPathComponent("Backup/2026/MISSING.jpg")
+    try FileManager.default.createDirectory(at: elsewhere.deletingLastPathComponent(), withIntermediateDirectories: true)
+    try FixtureCatalog.writeJPEG(to: elsewhere)
+    let found = CatalogVerifier.search(missing, in: fixture.root.appendingPathComponent("Backup"), catalogRoot: fixture.bundle)
+    #expect(found.first?.candidate?.resolvingSymlinksInPath().path == elsewhere.resolvingSymlinksInPath().path)
+
+    let errors = CatalogVerifier.restore(found)
+    #expect(errors.isEmpty)
+    #expect(FileManager.default.fileExists(atPath: fixture.bundle.appendingPathComponent("Originals/2026/01/01/1/MISSING.jpg").path))
+    #expect(try reader.missingFiles().isEmpty)
+    #expect(FileManager.default.fileExists(atPath: elsewhere.path))   // se copia, no se mueve
+}
+
+@Test func listsImagesNotInAnyAlbum() throws {
+    let fixture = try FixtureCatalog()
+    defer { fixture.cleanup() }
+    let reader = try CatalogReader(url: fixture.bundle)
+    // Todas las fotos de la fixture están en algún álbum salvo ninguna: comprobar que la consulta funciona.
+    #expect(try reader.imagesNotInAnyAlbum().isEmpty)
+}
+
+// MARK: - Traslado entre catálogos (partes sin Capture One)
+
+@Test func transferHelpers() {
+    #expect(CatalogTransferEngine.isPackable("_AM21178.ARW"))
+    #expect(CatalogTransferEngine.isPackable("DJI_0001.DNG"))
+    #expect(!CatalogTransferEngine.isPackable("scan.tif"))
+    #expect(!CatalogTransferEngine.isPackable("clip.mp4"))
+    #expect(CatalogTransferEngine.exportedName(for: "_AM21178.ARW") == "_AM21178.eip")
+    #expect(CatalogTransferEngine.exportedName(for: "Festival Astronomia.tif") == "Festival Astronomia.tif")
+    #expect(CaptureOneDriver.documentName(for: URL(fileURLWithPath: "/Users/x/Pictures/SonyA1.cocatalog")) == "SonyA1")
+    #expect(CaptureOneDriver.collectionReference(path: ["Diapositivas", "Zoo 1984"]) == "collection \"Zoo 1984\" of collection \"Diapositivas\"")
+    #expect(AppleScriptRunner.quote("Año \"84\" \\ fin") == "\"Año \\\"84\\\" \\\\ fin\"")
+    #expect(AppleScriptRunner.list([1, 2, 3]) == "{1, 2, 3}")
+
+    var photo = Photo(id: 1, uuid: "u", filename: "x.ARW", source: nil, isTrashed: false, isInsideCatalog: true)
+    photo.rating = 5
+    photo.colorTag = .green
+    photo.keywords = ["David", "Judit"]
+    let ok = CaptureOneDriver.VariantReadBack(id: 9, name: "x", rating: 5, colorTag: 4, keywords: ["judit", "David"], layerCount: 2)
+    #expect(CatalogTransferEngine.matches(photo, ok))
+    let bad = CaptureOneDriver.VariantReadBack(id: 9, name: "x", rating: 4, colorTag: 4, keywords: ["David", "Judit"], layerCount: 2)
+    #expect(!CatalogTransferEngine.matches(photo, bad))
+}
+
 // MARK: - Exportación
 
 @Test func plansCopiesAndKeepsManifest() throws {

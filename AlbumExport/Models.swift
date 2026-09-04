@@ -89,6 +89,36 @@ struct Photo: Identifiable, Hashable, Sendable {
     var fields: [String: String] = [:]
 }
 
+// MARK: - Acción
+
+/// Qué quiere hacer el usuario; determina qué datos pide la interfaz.
+enum AppAction: String, CaseIterable, Codable, Sendable {
+    /// Copiar los originales de los álbumes a una carpeta, con los metadatos en XMP.
+    case copy
+    /// Trasladar álbumes completos (ajustes incluidos) a otro catálogo de Capture One.
+    case move
+    /// Comprobar la coherencia entre `Originals/` y el índice del catálogo.
+    case verify
+
+    var title: String {
+        switch self {
+        case .copy: String(localized: "Copy photos to a folder", comment: "Acción principal")
+        case .move: String(localized: "Move albums to another catalog", comment: "Acción principal")
+        case .verify: String(localized: "Verify catalog", comment: "Acción principal")
+        }
+    }
+
+    var explanation: String {
+        switch self {
+        case .copy: String(localized: "Copies the originals of the matching albums to a folder and writes rating, color, keywords and IPTC into each file (XMP).", comment: "Explicación de acción")
+        case .move: String(localized: "Transfers the matching albums, with all adjustments, layers, masks and metadata, into another catalog using Capture One. Nothing is deleted from the source.", comment: "Explicación de acción")
+        case .verify: String(localized: "Compares the Originals folder with the index: orphan files, missing files and photos that belong to no album.", comment: "Explicación de acción")
+        }
+    }
+
+    var needsAlbums: Bool { self != .verify }
+}
+
 // MARK: - Exportación
 
 /// Opciones de la exportación elegidas por el usuario.

@@ -7,9 +7,11 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		06541CD15545A46FC21E7A90 /* CatalogTransferEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = A473D742C688866962A50E81 /* CatalogTransferEngine.swift */; };
 		0CC03556B92DBB3D72D96584 /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = 325073CD8D2F2598D022CA19 /* Localizable.xcstrings */; };
 		0E0834F5011FEBAB88B94BE5 /* ExportEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3527966E4CDEFE2D7CBF8994 /* ExportEngine.swift */; };
 		15D4276E9464B224839BDC51 /* AlbumExportApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2996CFFDDDCAF3EF97FABF4D /* AlbumExportApp.swift */; };
+		2C076DF8B29488EEAC0F975E /* CaptureOneDriver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5BD4F592BCD8B4A08B590E8E /* CaptureOneDriver.swift */; };
 		2C334E431EDF8E6E5A0446A9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 8ED2D3D5B36A959D88532A57 /* Assets.xcassets */; };
 		4B4687086F6B3945D6042FD3 /* VerifyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3814B79F9D8A5DB4A3067999 /* VerifyView.swift */; };
 		500D51A02E8DDA15170DF0BE /* SQLiteDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = D7AA7A6D84AD367A8430C8A1 /* SQLiteDatabase.swift */; };
@@ -47,10 +49,12 @@
 		3814B79F9D8A5DB4A3067999 /* VerifyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VerifyView.swift; sourceTree = "<group>"; };
 		4225F99DEEF539E8EF423B03 /* AlbumExportTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AlbumExportTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		468A34293B42CD68CCA92C10 /* ExifToolWriter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExifToolWriter.swift; sourceTree = "<group>"; };
+		5BD4F592BCD8B4A08B590E8E /* CaptureOneDriver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CaptureOneDriver.swift; sourceTree = "<group>"; };
 		65F3AE9672A9E63424922B7B /* ExportPlanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportPlanner.swift; sourceTree = "<group>"; };
 		750B4CFEB56A57564A480E34 /* AlbumExport.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = AlbumExport.entitlements; sourceTree = "<group>"; };
 		8ED2D3D5B36A959D88532A57 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		952C5A6E11646CA2CA3B6D10 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A473D742C688866962A50E81 /* CatalogTransferEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogTransferEngine.swift; sourceTree = "<group>"; };
 		A550B7DA2BF399931107FE64 /* ExportViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportViewModel.swift; sourceTree = "<group>"; };
 		C63EA0924A00A56E707AC67F /* CatalogReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CatalogReader.swift; sourceTree = "<group>"; };
 		D7AA7A6D84AD367A8430C8A1 /* SQLiteDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SQLiteDatabase.swift; sourceTree = "<group>"; };
@@ -90,7 +94,9 @@
 				750B4CFEB56A57564A480E34 /* AlbumExport.entitlements */,
 				2996CFFDDDCAF3EF97FABF4D /* AlbumExportApp.swift */,
 				8ED2D3D5B36A959D88532A57 /* Assets.xcassets */,
+				5BD4F592BCD8B4A08B590E8E /* CaptureOneDriver.swift */,
 				C63EA0924A00A56E707AC67F /* CatalogReader.swift */,
+				A473D742C688866962A50E81 /* CatalogTransferEngine.swift */,
 				1537DBA5DD0C59776AB066E6 /* CatalogVerifier.swift */,
 				952C5A6E11646CA2CA3B6D10 /* ContentView.swift */,
 				468A34293B42CD68CCA92C10 /* ExifToolWriter.swift */,
@@ -205,7 +211,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				15D4276E9464B224839BDC51 /* AlbumExportApp.swift in Sources */,
+				2C076DF8B29488EEAC0F975E /* CaptureOneDriver.swift in Sources */,
 				7F55DA02C40E68138FADFE0A /* CatalogReader.swift in Sources */,
+				06541CD15545A46FC21E7A90 /* CatalogTransferEngine.swift in Sources */,
 				AE5E2DA66CEDDA4CAA16F5EF /* CatalogVerifier.swift in Sources */,
 				C1574F75AB24C544279BE434 /* ContentView.swift in Sources */,
 				93F86C93ADAB015752ADCFFB /* ExifToolWriter.swift in Sources */,
@@ -391,6 +399,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Album Export";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Album Export drives Capture One to move albums between catalogs.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Francisco Cornellana";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -436,6 +445,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = "Album Export";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.photography";
+				INFOPLIST_KEY_NSAppleEventsUsageDescription = "Album Export drives Capture One to move albums between catalogs.";
 				INFOPLIST_KEY_NSHumanReadableCopyright = "© 2026 Francisco Cornellana";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

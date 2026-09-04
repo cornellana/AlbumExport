@@ -412,6 +412,20 @@ actor CatalogWorker {
         CatalogVerifier.moveOrphans(orphans, to: folder)
     }
 
+    func searchMissing(_ missing: [MissingFile], in folder: URL?) -> [MissingFile] {
+        CatalogVerifier.search(missing, in: folder, catalogRoot: reader.rootURL)
+    }
+
+    func restoreMissing(_ missing: [MissingFile]) -> [String: String] {
+        CatalogVerifier.restore(missing)
+    }
+
+    func transfer(plan: ExportPlan, destinationCatalog: URL, cancellation: CancellationToken,
+                  events: @escaping @Sendable (ExportEvent) -> Void) throws -> (jobs: [ExportJob], summary: ExportSummary) {
+        try CatalogTransferEngine(sourceCatalogURL: reader.rootURL, destinationCatalogURL: destinationCatalog, cancellation: cancellation)
+            .run(plan: plan, events: events)
+    }
+
     func plan(patterns: [String], selectedAlbumIDs: Set<Int>, albums: [Album], options: ExportOptions, destination: URL?) throws -> ExportPlan {
         try ExportPlanner.plan(patterns: patterns, selectedAlbumIDs: selectedAlbumIDs, albums: albums, catalog: reader, options: options, destination: destination)
     }
