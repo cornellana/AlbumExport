@@ -292,7 +292,8 @@ struct FixtureCatalog {
     let fixture = try FixtureCatalog()
     defer { fixture.cleanup() }
     let reader = try CatalogReader(url: fixture.bundle)
-    // Todas las fotos de la fixture están en algún álbum salvo ninguna: comprobar que la consulta funciona.
+    // Todas las fotos de la fixture están en algún álbum de usuario salvo la que solo está en
+    // el álbum automático de "Recent Imports"... que también está en Andorra 2025: lista vacía.
     #expect(try reader.imagesNotInAnyAlbum().isEmpty)
 }
 

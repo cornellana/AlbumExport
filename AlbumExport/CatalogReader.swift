@@ -353,15 +353,21 @@ final class CatalogReader: @unchecked Sendable {
         return missing.sorted { $0.expectedPath < $1.expectedPath }
     }
 
-    /// Imágenes del índice que no están en ningún álbum de usuario (ni en la papelera).
+    /// Imágenes del índice que no están en ningún álbum creado por el usuario (ni en la
+    /// papelera). Los álbumes automáticos de "Recent Imports" / "Recent Captures" no cuentan.
     func imagesNotInAnyAlbum() throws -> [UnfiledImage] {
         guard let albumEnt = entities["AlbumCollection"] else { return [] }
+        let folderEnt = entities["VirtualFolderCollection"] ?? -1
         let trashed = db.columns(of: "ZIMAGE").contains("ZISTRASHED") ? "AND IFNULL(i.ZISTRASHED, 0) = 0" : ""
+        let autoNames = Self.autoFolderNames.map { "'\($0)'" }.joined(separator: ", ")
         let rows = try db.query("""
             SELECT i.Z_PK AS pk FROM ZIMAGE i
-            WHERE NOT EXISTS (SELECT 1 FROM ZIMAGEINCOLLECTION ic JOIN ZCOLLECTION c ON c.Z_PK = ic.ZCOLLECTION
-                              WHERE ic.ZIMAGE = i.Z_PK AND c.Z_ENT = ?) \(trashed)
-            """, [albumEnt])
+            WHERE NOT EXISTS (SELECT 1 FROM ZIMAGEINCOLLECTION ic
+                              JOIN ZCOLLECTION c ON c.Z_PK = ic.ZCOLLECTION
+                              LEFT JOIN ZCOLLECTION p ON p.Z_PK = c.ZPARENT
+                              WHERE ic.ZIMAGE = i.Z_PK AND c.Z_ENT = ?
+                                AND NOT (p.Z_ENT = ? AND p.ZNAME IN (\(autoNames)))) \(trashed)
+            """, [albumEnt, folderEnt])
         let ids = Set(rows.compactMap { $0.int("pk") })
         return try allImageLocations().filter { ids.contains($0.id) }
             .map { UnfiledImage(imageID: $0.id, filename: $0.filename, path: expectedURL($0)?.path ?? "?") }
