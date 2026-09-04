@@ -355,23 +355,42 @@ final class CatalogReader: @unchecked Sendable {
 
     /// Imágenes del índice que no están en ningún álbum creado por el usuario (ni en la
     /// papelera). Los álbumes automáticos de "Recent Imports" / "Recent Captures" no cuentan.
+    /// Cada resultado indica si otra foto con el mismo nombre ya está en algún álbum.
     func imagesNotInAnyAlbum() throws -> [UnfiledImage] {
         guard let albumEnt = entities["AlbumCollection"] else { return [] }
         let folderEnt = entities["VirtualFolderCollection"] ?? -1
         let trashed = db.columns(of: "ZIMAGE").contains("ZISTRASHED") ? "AND IFNULL(i.ZISTRASHED, 0) = 0" : ""
         let autoNames = Self.autoFolderNames.map { "'\($0)'" }.joined(separator: ", ")
+        let userAlbumMembership = """
+            SELECT ic.ZIMAGE AS image, c.ZNAME AS album FROM ZIMAGEINCOLLECTION ic
+            JOIN ZCOLLECTION c ON c.Z_PK = ic.ZCOLLECTION
+            LEFT JOIN ZCOLLECTION p ON p.Z_PK = c.ZPARENT
+            WHERE c.Z_ENT = \(albumEnt) AND NOT (p.Z_ENT = \(folderEnt) AND p.ZNAME IN (\(autoNames)))
+            """
         let rows = try db.query("""
             SELECT i.Z_PK AS pk FROM ZIMAGE i
-            WHERE NOT EXISTS (SELECT 1 FROM ZIMAGEINCOLLECTION ic
-                              JOIN ZCOLLECTION c ON c.Z_PK = ic.ZCOLLECTION
-                              LEFT JOIN ZCOLLECTION p ON p.Z_PK = c.ZPARENT
-                              WHERE ic.ZIMAGE = i.Z_PK AND c.Z_ENT = ?
-                                AND NOT (p.Z_ENT = ? AND p.ZNAME IN (\(autoNames)))) \(trashed)
-            """, [albumEnt, folderEnt])
+            WHERE NOT EXISTS (SELECT 1 FROM (\(userAlbumMembership)) m WHERE m.image = i.Z_PK) \(trashed)
+            """)
         let ids = Set(rows.compactMap { $0.int("pk") })
+        // Nombre de fichero (minúsculas) -> primer álbum de usuario que contiene una foto con ese nombre.
+        var filedNames: [String: String] = [:]
+        for row in try db.query("""
+            SELECT LOWER(i.ZIMAGEFILENAME) AS name, MIN(m.album) AS album
+            FROM (\(userAlbumMembership)) m JOIN ZIMAGE i ON i.Z_PK = m.image GROUP BY LOWER(i.ZIMAGEFILENAME)
+            """) {
+            if let name = row.string("name"), let album = row.string("album") { filedNames[name] = album }
+        }
         return try allImageLocations().filter { ids.contains($0.id) }
-            .map { UnfiledImage(imageID: $0.id, filename: $0.filename, path: expectedURL($0)?.path ?? "?") }
+            .map { UnfiledImage(imageID: $0.id, filename: $0.filename, path: expectedURL($0)?.path ?? "?",
+                                duplicateInAlbum: filedNames[$0.filename.lowercased()]) }
             .sorted { $0.path < $1.path }
+    }
+
+    /// Identificadores de variante (= `id` en AppleScript) de las imágenes dadas.
+    func variantIDs(forImages imageIDs: [Int]) throws -> [Int] {
+        guard !imageIDs.isEmpty else { return [] }
+        let list = imageIDs.map(String.init).joined(separator: ",")
+        return try db.query("SELECT Z_PK FROM ZVARIANT WHERE ZIMAGE IN (\(list)) ORDER BY ZIMAGE, ZINDEX").compactMap { $0.int("Z_PK") }
     }
 
     // MARK: - Keywords

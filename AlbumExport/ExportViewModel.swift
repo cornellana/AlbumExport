@@ -577,6 +577,33 @@ final class ExportViewModel {
         }
     }
 
+    var showUnfiledAlbumConfirmation = false
+
+    /// Nombre del álbum que reúne las fotos sin clasificar.
+    static var unfiledAlbumName: String { String(localized: "Unfiled", comment: "Nombre del álbum de fotos sin clasificar") }
+
+    /// Solo a petición del usuario y tras confirmar: nunca se crea automáticamente.
+    func requestUnfiledAlbum() {
+        guard verifyResult?.unfiledToFile.isEmpty == false else { return }
+        showUnfiledAlbumConfirmation = true
+    }
+
+    /// Crea en Capture One el álbum "Sin clasificar" con las fotos sin álbum que no sean duplicados.
+    func createUnfiledAlbum() {
+        guard let worker, let result = verifyResult else { return }
+        isVerifying = true
+        verifyProgress = String(localized: "Creating the album in Capture One…", comment: "Progreso de verificación")
+        Task {
+            do {
+                let added = try await worker.createUnfiledAlbum(named: Self.unfiledAlbumName, images: result.unfiled)
+                verifyMessage = String(localized: "Album \"\(Self.unfiledAlbumName)\": \(added) photos added.", comment: "Resumen tras crear el álbum")
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+            isVerifying = false
+        }
+    }
+
     func saveVerifyReport() {
         guard let result = verifyResult else { return }
         let panel = NSSavePanel()

@@ -25,6 +25,8 @@ struct FixtureCatalog {
         try Self.writeJPEG(to: originals.appendingPathComponent("IMG_0001.jpg"))
         try Self.writeJPEG(to: originals.appendingPathComponent("IMG_0002.jpg"))
         try Self.writeJPEG(to: originals2.appendingPathComponent("IMG_0001.jpg"))   // mismo nombre, otra carpeta
+        try Self.writeJPEG(to: originals2.appendingPathComponent("LONE.jpg"))
+        try Self.writeJPEG(to: originals2.appendingPathComponent("img_0002.JPG"))
         try Self.writeJPEG(to: externalFolder.appendingPathComponent("EXT_0001.jpg"))
 
         let db = try SQLiteDatabase(path: bundle.appendingPathComponent("Fixture.cocatalogdb").path, create: true)
@@ -39,7 +41,8 @@ struct FixtureCatalog {
                 (3,0,'/','\(externalFolder.path.dropFirst())');
             CREATE TABLE ZIMAGE (Z_PK INTEGER PRIMARY KEY, ZIMAGEUUID VARCHAR, ZIMAGEFILENAME VARCHAR, ZISTRASHED BOOLEAN, ZISINSIDECATALOG BOOLEAN, ZIMAGELOCATION INTEGER);
             INSERT INTO ZIMAGE VALUES (10,'U10','IMG_0001.jpg',0,1,1),(11,'U11','IMG_0002.jpg',0,1,1),(12,'U12','IMG_0001.jpg',0,1,2),
-                (13,'U13','EXT_0001.jpg',0,0,3),(14,'U14','MISSING.jpg',0,1,1),(15,'U15','IMG_0002.jpg',1,1,1);
+                (13,'U13','EXT_0001.jpg',0,0,3),(14,'U14','MISSING.jpg',0,1,1),(15,'U15','IMG_0002.jpg',1,1,1),
+                (16,'U16','LONE.jpg',0,1,2),(17,'U17','img_0002.JPG',0,1,2);   -- sin álbum: uno propio y un duplicado por nombre
             CREATE TABLE ZIMAGEINCOLLECTION (Z_PK INTEGER PRIMARY KEY, ZCOLLECTION INTEGER, ZIMAGE INTEGER);
             INSERT INTO ZIMAGEINCOLLECTION (ZCOLLECTION, ZIMAGE) VALUES (5,10),(5,11),(5,12),(5,14),(5,15),(6,13),(3,10);
             CREATE TABLE ZVARIANTMETADATA (Z_PK INTEGER PRIMARY KEY, ZBASIC_RATING INTEGER, ZCOLOR_TAG_INDEX INTEGER, ZCONTENT_KEYWORDS VARCHAR,
@@ -52,7 +55,7 @@ struct FixtureCatalog {
             CREATE TABLE ZVARIANT (Z_PK INTEGER PRIMARY KEY, ZIMAGE INTEGER, ZINDEX INTEGER, ZCOMBINEDSETTINGS INTEGER, ZADJUSTMENTLAYER INTEGER, ZDEFAULTLAYER INTEGER);
             INSERT INTO ZVARIANT VALUES (20,10,127,200,200,200),(21,11,127,201,201,201),
                 (22,12,127,NULL,203,202),   -- sin capa combinada: fusión de ajuste sobre defecto
-                (23,13,127,204,204,204),(24,14,127,205,205,205),(25,15,127,201,201,201);
+                (23,13,127,204,204,204),(24,14,127,205,205,205),(25,15,127,201,201,201),(26,16,127,201,201,201),(27,17,127,201,201,201);
             CREATE TABLE ZVARIANTINCOLLECTION (Z_PK INTEGER PRIMARY KEY, ZCOLLECTION INTEGER, ZVARIANT INTEGER);
             INSERT INTO ZVARIANTINCOLLECTION (ZCOLLECTION, ZVARIANT) VALUES (5,20),(5,21),(5,22),(6,23);
             CREATE TABLE ZKEYWORD (Z_PK INTEGER PRIMARY KEY, ZNAME VARCHAR, ZPARENT INTEGER);
@@ -234,8 +237,8 @@ struct FixtureCatalog {
     let reader = try CatalogReader(url: fixture.bundle)
 
     let result = try CatalogVerifier.scan(catalog: reader)
-    #expect(result.filesOnDisk == 5)          // 3 registrados + el huérfano + el lateral
-    #expect(result.referenced == 4)           // rutas distintas: la foto en papelera comparte fichero con otra
+    #expect(result.filesOnDisk == 7)          // 5 registrados + el huérfano + el lateral
+    #expect(result.referenced == 6)           // rutas distintas: la foto en papelera comparte fichero con otra
     #expect(result.orphans.map(\.relativePath) == ["Originals/2026/01/01/1/ORPHAN.jpg"])
     #expect(result.missing.map(\.filename) == ["MISSING.jpg"])
 
@@ -292,9 +295,14 @@ struct FixtureCatalog {
     let fixture = try FixtureCatalog()
     defer { fixture.cleanup() }
     let reader = try CatalogReader(url: fixture.bundle)
-    // Todas las fotos de la fixture están en algún álbum de usuario salvo la que solo está en
-    // el álbum automático de "Recent Imports"... que también está en Andorra 2025: lista vacía.
-    #expect(try reader.imagesNotInAnyAlbum().isEmpty)
+    let unfiled = try reader.imagesNotInAnyAlbum()
+    #expect(unfiled.map(\.filename) == ["LONE.jpg", "img_0002.JPG"])
+    #expect(unfiled[0].duplicateInAlbum == nil)
+    #expect(unfiled[1].duplicateInAlbum == "Andorra 2025")          // mismo nombre que IMG_0002.jpg, ya clasificada
+    let result = try CatalogVerifier.scan(catalog: reader)
+    #expect(result.unfiledToFile.map(\.imageID) == [16])
+    #expect(result.unfiledDuplicates == 1)
+    #expect(try reader.variantIDs(forImages: [16, 17]) == [26, 27])
 }
 
 // MARK: - Traslado entre catálogos (partes sin Capture One)

@@ -129,6 +129,22 @@
         }
       }
     },
+    "Add %lld photos to the album \"%@\"?": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vols afegir %lld fotos a l'àlbum \"%@\"?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Añadir %lld fotos al álbum \"%@\"?"
+          }
+        }
+      }
+    },
     "Adjustments JSON": {
       "localizations": {
         "ca": {
@@ -157,6 +173,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Álbum"
+          }
+        }
+      }
+    },
+    "Album \"%@\": %lld photos added.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Àlbum \"%@\": %lld fotos afegides."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Álbum \"%@\": %lld fotos añadidas."
           }
         }
       }
@@ -429,6 +461,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Capture One exportará cada foto con sus ajustes y la importará en el catálogo de destino, recreando grupos y álbumes. No se borra nada del catálogo de origen."
+          }
+        }
+      }
+    },
+    "Capture One will open the catalog and add the photos to that album (created if needed). Photos whose file name is already in another album are skipped.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture One obrirà el catàleg i afegirà les fotos a aquest àlbum (es crea si no existeix). Les fotos amb un nom de fitxer que ja és en un altre àlbum s'ometen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture One abrirá el catálogo y añadirá las fotos a ese álbum (se crea si no existe). Las fotos cuyo nombre de fichero ya está en otro álbum se omiten."
           }
         }
       }
@@ -785,6 +833,38 @@
         }
       }
     },
+    "Create \"%@\" album in Capture One": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crea l'àlbum \"%@\" al Capture One"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crear álbum \"%@\" en Capture One"
+          }
+        }
+      }
+    },
+    "Create album": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crea l'àlbum"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Crear álbum"
+          }
+        }
+      }
+    },
     "Create new…": {
       "localizations": {
         "ca": {
@@ -813,6 +893,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Creando el catálogo %@…"
+          }
+        }
+      }
+    },
+    "Creating the album in Capture One…": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Creant l'àlbum al Capture One…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Creando el álbum en Capture One…"
           }
         }
       }
@@ -1809,6 +1905,22 @@
         }
       }
     },
+    "Not in any album: %lld (%lld duplicates)": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sense àlbum: %lld (%lld duplicats)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin álbum: %lld (%lld duplicados)"
+          }
+        }
+      }
+    },
     "OK": {
       "localizations": {
         "ca": {
@@ -2129,6 +2241,22 @@
         }
       }
     },
+    "Photos in the index but in no user album. %lld share their file name with a photo already in an album and are treated as duplicates: they are not added.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotos a l'índex però a cap àlbum d'usuari. %lld comparteixen nom de fitxer amb una foto ja classificada i es tracten com a duplicats: no s'afegeixen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotos en el índice pero en ningún álbum de usuario. %lld comparten nombre de fichero con una foto ya clasificada y se tratan como duplicados: no se añaden."
+          }
+        }
+      }
+    },
     "Photos stored inside the catalog bundle will become offline in Capture One. This cannot be undone from this app.": {
       "localizations": {
         "ca": {
@@ -2413,6 +2541,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Error de SQLite: %@"
+          }
+        }
+      }
+    },
+    "Same name already in album": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mateix nom ja en àlbum"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mismo nombre ya en álbum"
           }
         }
       }
@@ -2749,6 +2893,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Escribe un patrón o marca álbumes en la barra lateral"
+          }
+        }
+      }
+    },
+    "Unfiled": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sense classificar"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin clasificar"
           }
         }
       }

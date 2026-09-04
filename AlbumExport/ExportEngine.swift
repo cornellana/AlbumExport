@@ -420,6 +420,22 @@ actor CatalogWorker {
         CatalogVerifier.restore(missing)
     }
 
+    /// Crea (o completa) en Capture One un álbum con las fotos sin clasificar que no sean
+    /// duplicados de fotos ya clasificadas. Devuelve cuántas se añadieron.
+    func createUnfiledAlbum(named name: String, images: [UnfiledImage]) throws -> Int {
+        let driver = CaptureOneDriver()
+        try driver.launch()
+        try driver.openCatalog(reader.rootURL)
+        let document = CaptureOneDriver.documentName(for: reader.rootURL)
+        let existing = Set(try driver.ensureAlbum(document: document, path: [name]).map { $0.lowercased() })
+        let toAdd = images.filter { $0.duplicateInAlbum == nil && !existing.contains(($0.filename as NSString).deletingPathExtension.lowercased()) }
+        let variantIDs = try reader.variantIDs(forImages: toAdd.map(\.imageID))
+        for chunk in stride(from: 0, to: variantIDs.count, by: 200).map({ Array(variantIDs[$0..<min($0 + 200, variantIDs.count)]) }) {
+            try driver.addToAlbum(document: document, path: [name], variantIDs: chunk)
+        }
+        return toAdd.count
+    }
+
     func transfer(plan: ExportPlan, destinationCatalog: URL, cancellation: CancellationToken,
                   events: @escaping @Sendable (ExportEvent) -> Void) throws -> (jobs: [ExportJob], summary: ExportSummary) {
         try CatalogTransferEngine(sourceCatalogURL: reader.rootURL, destinationCatalogURL: destinationCatalog, cancellation: cancellation)

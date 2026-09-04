@@ -87,10 +87,18 @@ struct VerifyView: View {
                         Table(result.unfiled) {
                             TableColumn("File") { Text(verbatim: $0.filename) }.width(180)
                             TableColumn("Path") { Text(verbatim: $0.path) }
+                            TableColumn("Same name already in album") { item in
+                                Text(verbatim: item.duplicateInAlbum ?? "")
+                                    .foregroundStyle(.orange)
+                            }.width(200)
                         }
                     }
-                    Text("Photos that are in the catalog index but in no user album. They are still part of the catalog; this list is informative.")
-                        .font(.caption).foregroundStyle(.secondary)
+                    HStack {
+                        Button("Create \"\(ExportViewModel.unfiledAlbumName)\" album in Capture One") { model.requestUnfiledAlbum() }
+                            .disabled(result.unfiledToFile.isEmpty)
+                        Text("Photos in the index but in no user album. \(result.unfiledDuplicates) share their file name with a photo already in an album and are treated as duplicates: they are not added.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                 }
                 if let message = model.verifyMessage {
                     Text(verbatim: message).foregroundStyle(.secondary)
@@ -113,6 +121,13 @@ struct VerifyView: View {
         } message: {
             Text("They will be moved to \(model.orphanTargetFolder?.path ?? "") keeping their folder structure, so they can be imported again.")
         }
+        .confirmationDialog("Add \(model.verifyResult?.unfiledToFile.count ?? 0) photos to the album \"\(ExportViewModel.unfiledAlbumName)\"?",
+                            isPresented: $model.showUnfiledAlbumConfirmation, titleVisibility: .visible) {
+            Button("Create album") { model.createUnfiledAlbum() }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Capture One will open the catalog and add the photos to that album (created if needed). Photos whose file name is already in another album are skipped.")
+        }
         .confirmationDialog("Restore \(model.verifyResult?.foundCount ?? 0) found files into the catalog?",
                             isPresented: $model.showRestoreConfirmation, titleVisibility: .visible) {
             Button("Restore") { model.restoreMissing() }
@@ -130,7 +145,7 @@ struct VerifyView: View {
                 .foregroundStyle(result.orphans.isEmpty ? Color.primary : Color.orange)
             Text("Missing files: \(result.missing.count)")
                 .foregroundStyle(result.missing.isEmpty ? Color.primary : Color.red)
-            Text("Not in any album: \(result.unfiled.count)")
+            Text("Not in any album: \(result.unfiled.count) (\(result.unfiledDuplicates) duplicates)")
         }
         .font(.callout)
     }
