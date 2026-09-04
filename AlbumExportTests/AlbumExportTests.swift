@@ -257,6 +257,7 @@ struct FixtureCatalog {
     let reader = try CatalogReader(url: fixture.bundle)
     let missing = try reader.missingFiles()
     #expect(missing.map(\.filename) == ["MISSING.jpg"])
+    #expect(missing[0].alsoIndexedAt == nil)
 
     // Un candidato con el nombre correcto fuera del catálogo.
     let elsewhere = fixture.root.appendingPathComponent("Backup/2026/MISSING.jpg")
@@ -521,4 +522,17 @@ struct FixtureCatalog {
     for o in result.orphans.prefix(5) { print("VERIFY-REAL orphan \(o.relativePath) \(o.size)") }
     for m in result.missing.prefix(5) { print("VERIFY-REAL missing \(m.expectedPath) -> \(m.candidate?.path ?? "-")") }
     #expect(result.filesOnDisk > 0)
+}
+
+
+/// Un perdido cuyo nombre ya está indexado con fichero presente se señala como importación duplicada.
+@Test func flagsMissingEntriesAlreadyIndexedElsewhere() throws {
+    let fixture = try FixtureCatalog()
+    defer { fixture.cleanup() }
+    let db = try SQLiteDatabase(path: fixture.bundle.appendingPathComponent("Fixture.cocatalogdb").path)
+    // Segunda entrada de IMG_0001.jpg apuntando a una carpeta que no existe.
+    try db.execute("INSERT INTO ZPATHLOCATION VALUES (9,1,NULL,'Originals/2020/01/01/9'); INSERT INTO ZIMAGE VALUES (18,'U18','IMG_0001.jpg',0,1,9); INSERT INTO ZVARIANT VALUES (28,18,127,201,201,201);")
+    let reader = try CatalogReader(url: fixture.bundle)
+    let dup = try #require(try reader.missingFiles().first { $0.imageID == 18 })
+    #expect(dup.alsoIndexedAt?.hasSuffix("Originals/2026/01/01/1/IMG_0001.jpg") == true)
 }

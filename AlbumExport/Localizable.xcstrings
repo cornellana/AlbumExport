@@ -305,6 +305,22 @@
         }
       }
     },
+    "Already indexed at %@": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ja indexada a %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ya indexada en %@"
+          }
+        }
+      }
+    },
     "Andorra 20??; Isla*": {
       "localizations": {
         "ca": {
@@ -317,6 +333,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Andorra 20??; Isla*"
+          }
+        }
+      }
+    },
+    "Another catalog entry with the same file name has its file. This missing entry is a duplicate import; remove it in Capture One.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una altra entrada del catàleg amb el mateix nom sí que té el fitxer. Aquesta entrada perduda és una importació duplicada; esborra-la al Capture One."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otra entrada del catálogo con el mismo nombre sí tiene su fichero. Esta entrada perdida es una importación duplicada; bórrala en Capture One."
           }
         }
       }
@@ -2141,6 +2173,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Primero se cruzan con los huérfanos del propio catálogo (nombre y tamaño), que al restaurar se mueven a su sitio; lo encontrado fuera se copia."
+          }
+        }
+      }
+    },
+    "Orphans inside the catalog are matched first (name and size) and restoring moves them into place; files found elsewhere are copied. Entries already indexed under another path are duplicate imports.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Primer es creuen amb els orfes del mateix catàleg (nom i mida), que en restaurar es mouen al seu lloc; el que es troba fora es copia. Les entrades ja indexades en una altra ruta són importacions duplicades."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Primero se cruzan con los huérfanos del propio catálogo (nombre y tamaño), que al restaurar se mueven a su sitio; lo encontrado fuera se copia. Las entradas ya indexadas en otra ruta son importaciones duplicadas."
           }
         }
       }

@@ -20,6 +20,9 @@ struct MissingFile: Identifiable, Hashable, Sendable {
     var candidate: URL?
     /// El candidato es un huérfano dentro del propio bundle: restaurar lo mueve en vez de copiarlo.
     var candidateIsOrphan = false
+    /// Otra entrada del índice con el mismo nombre cuyo fichero sí existe: la foto ya está en el
+    /// catálogo por otra vía (importación duplicada); este registro perdido sobra.
+    var alsoIndexedAt: String?
     var id: Int { imageID }
 }
 

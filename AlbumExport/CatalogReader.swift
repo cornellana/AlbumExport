@@ -334,6 +334,7 @@ final class CatalogReader: @unchecked Sendable {
         let locations = try allImageLocations()
         let mounted = Set((FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: nil, options: []) ?? []).map { $0.standardizedFileURL.path })
         var checked = 0
+        var presentByName: [String: String] = [:]   // nombre en minúsculas -> ruta de un fichero indexado que sí existe
         for loc in locations {
             if cancellation?.isCancelled == true { throw ExportInterruptionError.cancelled }
             checked += 1
@@ -348,9 +349,16 @@ final class CatalogReader: @unchecked Sendable {
             }
             if !FileManager.default.fileExists(atPath: url.path) {
                 missing.append(MissingFile(imageID: loc.id, filename: loc.filename, expectedPath: url.path, size: loc.size))
+            } else if presentByName[loc.filename.lowercased()] == nil {
+                presentByName[loc.filename.lowercased()] = url.path
             }
         }
-        return missing.sorted { $0.expectedPath < $1.expectedPath }
+        // Un perdido cuyo nombre ya está indexado con fichero presente es una importación duplicada.
+        return missing.map { item in
+            var updated = item
+            updated.alsoIndexedAt = presentByName[item.filename.lowercased()]
+            return updated
+        }.sorted { $0.expectedPath < $1.expectedPath }
     }
 
     /// Imágenes del índice que no están en ningún álbum creado por el usuario (ni en la

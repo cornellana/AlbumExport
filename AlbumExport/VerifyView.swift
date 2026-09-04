@@ -58,6 +58,10 @@ struct VerifyView: View {
                                     Text(verbatim: (item.candidateIsOrphan ? "⟲ " : "") + candidate.path)
                                         .foregroundStyle(Color.green)
                                         .help(item.candidateIsOrphan ? "Orphan inside the catalog: will be moved into place" : "Found outside the catalog: will be copied")
+                                } else if let indexed = item.alsoIndexedAt {
+                                    Text("Already indexed at \(indexed)")
+                                        .foregroundStyle(Color.orange)
+                                        .help("Another catalog entry with the same file name has its file. This missing entry is a duplicate import; remove it in Capture One.")
                                 } else {
                                     Text("")
                                 }
@@ -77,7 +81,7 @@ struct VerifyView: View {
                         .disabled(result.missing.isEmpty)
                         Button("Restore found files into the catalog") { model.requestRestore() }
                             .disabled(result.foundCount == 0)
-                        Text("Orphans inside the catalog are matched first (name and size) and restoring moves them into place; files found elsewhere are copied.")
+                        Text("Orphans inside the catalog are matched first (name and size) and restoring moves them into place; files found elsewhere are copied. Entries already indexed under another path are duplicate imports.")
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 case .unfiled:
