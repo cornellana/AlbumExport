@@ -1,0 +1,55 @@
+name: AlbumExport
+options:
+  bundleIdPrefix: com.cornellana
+  deploymentTarget:
+    macOS: "14.0"
+  knownRegions: [en, es, ca]
+  developmentLanguage: en
+targets:
+  AlbumExport:
+    type: application
+    platform: macOS
+    sources: [AlbumExport]
+    # Sin sandbox: la app lanza exiftool y lee el bundle .cocatalog completo.
+    # No va al App Store; se firma con hardened runtime para copiarla entre Macs.
+    entitlements:
+      path: AlbumExport/AlbumExport.entitlements
+      properties:
+        com.apple.security.app-sandbox: false
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Album Export
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.photography
+        INFOPLIST_KEY_NSHumanReadableCopyright: "© 2026 Francisco Cornellana"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SWIFT_VERSION: "5.9"
+        CURRENT_PROJECT_VERSION: 1
+        MARKETING_VERSION: 1.0
+        DEVELOPMENT_TEAM: TJ6V4QM3GB    # Francisco Cornellana Castells
+        CODE_SIGN_STYLE: Automatic
+        ENABLE_HARDENED_RUNTIME: YES
+        COMBINE_HIDPI_IMAGES: YES
+  AlbumExportTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources: [AlbumExportTests]
+    dependencies:
+      - target: AlbumExport
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "5.9"
+        DEVELOPMENT_TEAM: TJ6V4QM3GB
+        CODE_SIGN_STYLE: Automatic
+schemes:
+  AlbumExport:
+    build:
+      targets:
+        AlbumExport: all
+        AlbumExportTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets: [AlbumExportTests]

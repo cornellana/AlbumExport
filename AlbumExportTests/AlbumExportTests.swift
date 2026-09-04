@@ -1,0 +1,262 @@
+import CoreGraphics
+import Foundation
+import ImageIO
+import Testing
+import UniformTypeIdentifiers
+@testable import AlbumExport
+
+// MARK: - Catálogo de prueba
+
+/// Construye un catálogo sintético con el esquema mínimo que usa la app, con ficheros reales.
+struct FixtureCatalog {
+    let root: URL
+    let bundle: URL
+    let externalFolder: URL
+
+    init() throws {
+        root = FileManager.default.temporaryDirectory.appendingPathComponent("AlbumExportTests-\(UUID().uuidString)", isDirectory: true)
+        bundle = root.appendingPathComponent("Fixture.cocatalog", isDirectory: true)
+        externalFolder = root.appendingPathComponent("External", isDirectory: true)
+        let originals = bundle.appendingPathComponent("Originals/2026/01/01/1", isDirectory: true)
+        let originals2 = bundle.appendingPathComponent("Originals/2026/01/02/2", isDirectory: true)
+        for folder in [originals, originals2, externalFolder] {
+            try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        }
+        try Self.writeJPEG(to: originals.appendingPathComponent("IMG_0001.jpg"))
+        try Self.writeJPEG(to: originals.appendingPathComponent("IMG_0002.jpg"))
+        try Self.writeJPEG(to: originals2.appendingPathComponent("IMG_0001.jpg"))   // mismo nombre, otra carpeta
+        try Self.writeJPEG(to: externalFolder.appendingPathComponent("EXT_0001.jpg"))
+
+        let db = try SQLiteDatabase(path: bundle.appendingPathComponent("Fixture.cocatalogdb").path, create: true)
+        try db.execute("""
+            CREATE TABLE ZENTITIES (Z_ENT INTEGER, ZNAME VARCHAR);
+            INSERT INTO ZENTITIES VALUES (1,'Collection'),(2,'AlbumCollection'),(5,'SmartCollection'),(7,'ProjectCollection'),(8,'VirtualFolderCollection');
+            CREATE TABLE ZCOLLECTION (Z_ENT INTEGER, Z_PK INTEGER PRIMARY KEY, ZNAME VARCHAR, ZPARENT INTEGER);
+            INSERT INTO ZCOLLECTION VALUES (7,1,'root',NULL),(8,2,'Recent Imports',1),(2,3,'March 7, 2026 at 11:48 AM',2),
+                (8,4,'Viajes',1),(2,5,'Andorra 2025',4),(2,6,'Andorra 2024',1),(5,7,'Five Stars',1);
+            CREATE TABLE ZPATHLOCATION (Z_PK INTEGER PRIMARY KEY, ZISRELATIVE BOOLEAN, ZMACROOT VARCHAR, ZRELATIVEPATH VARCHAR);
+            INSERT INTO ZPATHLOCATION VALUES (1,1,NULL,'Originals/2026/01/01/1'),(2,1,NULL,'Originals/2026/01/02/2'),
+                (3,0,'/','\(externalFolder.path.dropFirst())');
+            CREATE TABLE ZIMAGE (Z_PK INTEGER PRIMARY KEY, ZIMAGEUUID VARCHAR, ZIMAGEFILENAME VARCHAR, ZISTRASHED BOOLEAN, ZISINSIDECATALOG BOOLEAN, ZIMAGELOCATION INTEGER);
+            INSERT INTO ZIMAGE VALUES (10,'U10','IMG_0001.jpg',0,1,1),(11,'U11','IMG_0002.jpg',0,1,1),(12,'U12','IMG_0001.jpg',0,1,2),
+                (13,'U13','EXT_0001.jpg',0,0,3),(14,'U14','MISSING.jpg',0,1,1),(15,'U15','IMG_0002.jpg',1,1,1);
+            CREATE TABLE ZIMAGEINCOLLECTION (Z_PK INTEGER PRIMARY KEY, ZCOLLECTION INTEGER, ZIMAGE INTEGER);
+            INSERT INTO ZIMAGEINCOLLECTION (ZCOLLECTION, ZIMAGE) VALUES (5,10),(5,11),(5,12),(5,14),(5,15),(6,13),(3,10);
+            CREATE TABLE ZVARIANTMETADATA (Z_PK INTEGER PRIMARY KEY, ZBASIC_RATING INTEGER, ZCOLOR_TAG_INDEX INTEGER, ZCONTENT_KEYWORDS VARCHAR,
+                ZCONTENT_DESCRIPTION VARCHAR, ZIMAGE_CITY VARCHAR, ZSTATUS_TITLE VARCHAR, ZBASIC_LABEL VARCHAR);
+            INSERT INTO ZVARIANTMETADATA VALUES (100,5,4,'David||0,Judit||1','Línea 1\nLínea 2 & más','Andorra la Vella','Título',NULL),
+                (101,0,0,'',NULL,NULL,NULL,NULL),(102,NULL,NULL,NULL,NULL,NULL,NULL,NULL),(103,3,1,'David||0',NULL,NULL,NULL,NULL),
+                (104,2,0,NULL,NULL,NULL,NULL,NULL),(105,4,5,'Judit||0',NULL,NULL,NULL,NULL);
+            CREATE TABLE ZVARIANTLAYER (Z_PK INTEGER PRIMARY KEY, ZMETADATA INTEGER, ZVARIANT INTEGER, ZEXPOSURE FLOAT);
+            INSERT INTO ZVARIANTLAYER VALUES (200,100,20,0.5),(201,101,21,NULL),(202,102,22,NULL),(203,103,22,NULL),(204,104,23,NULL),(205,105,24,NULL);
+            CREATE TABLE ZVARIANT (Z_PK INTEGER PRIMARY KEY, ZIMAGE INTEGER, ZINDEX INTEGER, ZCOMBINEDSETTINGS INTEGER, ZADJUSTMENTLAYER INTEGER, ZDEFAULTLAYER INTEGER);
+            INSERT INTO ZVARIANT VALUES (20,10,127,200,200,200),(21,11,127,201,201,201),
+                (22,12,127,NULL,203,202),   -- sin capa combinada: fusión de ajuste sobre defecto
+                (23,13,127,204,204,204),(24,14,127,205,205,205),(25,15,127,201,201,201);
+            CREATE TABLE ZVARIANTINCOLLECTION (Z_PK INTEGER PRIMARY KEY, ZCOLLECTION INTEGER, ZVARIANT INTEGER);
+            INSERT INTO ZVARIANTINCOLLECTION (ZCOLLECTION, ZVARIANT) VALUES (5,20),(5,21),(5,22),(6,23);
+            CREATE TABLE ZKEYWORD (Z_PK INTEGER PRIMARY KEY, ZNAME VARCHAR, ZPARENT INTEGER);
+            INSERT INTO ZKEYWORD VALUES (1,'Familia',NULL),(2,'David',1),(3,'Judit',NULL);
+            CREATE TABLE ZVERSIONINFO (Z_PK INTEGER PRIMARY KEY, ZAUTHOR VARCHAR, ZVERSION INTEGER);
+            INSERT INTO ZVERSIONINFO VALUES (1,'16.8.5.30 Pro Mac',160800);
+            """)
+    }
+
+    func cleanup() {
+        try? FileManager.default.removeItem(at: root)
+    }
+
+    static func writeJPEG(to url: URL) throws {
+        let space = CGColorSpaceCreateDeviceRGB()
+        guard let context = CGContext(data: nil, width: 16, height: 16, bitsPerComponent: 8, bytesPerRow: 64, space: space,
+                                      bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue),
+              let image = context.makeImage(),
+              let destination = CGImageDestinationCreateWithURL(url as CFURL, UTType.jpeg.identifier as CFString, 1, nil) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        context.setFillColor(CGColor(colorSpace: space, components: [0.2, 0.5, 0.8, 1])!)
+        context.fill(CGRect(x: 0, y: 0, width: 16, height: 16))
+        CGImageDestinationAddImage(destination, image, nil)
+        guard CGImageDestinationFinalize(destination) else { throw CocoaError(.fileWriteUnknown) }
+    }
+}
+
+// MARK: - Unidades puras
+
+@Test func patternsParseAndMatch() {
+    #expect(PatternMatcher.parse(" Andorra 20?? ; Isla*\n Toscana ") == ["Andorra 20??", "Isla*", "Toscana"])
+    #expect(PatternMatcher.matches("andorra 20??", "Andorra 2025"))
+    #expect(!PatternMatcher.matches("Andorra 20??", "Andorra 202"))
+    #expect(PatternMatcher.matches("*feroes*", "Islas Feroes 2025"))
+}
+
+@Test func keywordParsing() {
+    #expect(CatalogReader.parseKeywords("David||0,Judit||1,David||2") == ["David", "Judit"])
+    #expect(CatalogReader.parseKeywords(nil).isEmpty)
+    #expect(CatalogReader.parseKeywords("").isEmpty)
+}
+
+@Test func folderNameSanitizing() {
+    #expect(ExportPlanner.sanitize("Andorra 20??", stripWildcards: true) == "Andorra 20")
+    #expect(ExportPlanner.sanitize("Diapositivas/Zoo*: 1984", stripWildcards: true) == "Diapositivas Zoo 1984")
+    #expect(ExportPlanner.sanitize("***", stripWildcards: true) == "album")
+}
+
+@Test func uniqueNamesGetSuffixes() throws {
+    let folder = FileManager.default.temporaryDirectory.appendingPathComponent("names-\(UUID().uuidString)")
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    defer { try? FileManager.default.removeItem(at: folder) }
+    try Data().write(to: folder.appendingPathComponent("A.ARW"))
+    var allocator = NameAllocator(folder: folder)
+    #expect(allocator.unique("A.ARW").lastPathComponent == "A_1.ARW")
+    #expect(allocator.unique("a.arw").lastPathComponent == "a_2.arw")
+    #expect(allocator.unique("B.ARW").lastPathComponent == "B.ARW")
+}
+
+@Test func exiftoolArgumentsReplaceListsAndEscape() {
+    var photo = Photo(id: 1, uuid: "u", filename: "x.jpg", source: nil, isTrashed: false, isInsideCatalog: true)
+    photo.rating = 5
+    photo.colorTag = .green
+    photo.keywords = ["David", "Judit"]
+    photo.hierarchicalKeywords = ["Familia|David", "Judit"]
+    photo.fields = ["ZCONTENT_DESCRIPTION": "Línea 1\nLínea 2 & más"]
+    let args = ExifToolWriter.arguments(for: photo)
+    #expect(args.contains("-XMP-xmp:Rating=5"))
+    #expect(args.contains("-XMP-xmp:Label=Green"))
+    #expect(args.contains("-MWG:Keywords=David"))
+    #expect(args.contains("-MWG:Keywords=Judit"))
+    #expect(!args.contains(where: { $0.hasPrefix("-MWG:Keywords+=") }))
+    #expect(args.contains("-XMP-lr:HierarchicalSubject=Familia|David"))
+    #expect(args.contains("-MWG:Description=Línea 1&#10;Línea 2 &amp; más"))
+
+    photo.keywords = []
+    photo.hierarchicalKeywords = []
+    photo.colorTag = ColorTag.none
+    let cleared = ExifToolWriter.arguments(for: photo)
+    #expect(cleared.contains("-MWG:Keywords="))
+    #expect(cleared.contains("-XMP-xmp:Label="))
+}
+
+// MARK: - Lectura del catálogo
+
+@Test func readsAlbumsPathsAndMetadata() throws {
+    let fixture = try FixtureCatalog()
+    defer { fixture.cleanup() }
+    let reader = try CatalogReader(url: fixture.bundle)
+    #expect(reader.version?.format == 160800)
+    #expect(reader.warnings.isEmpty)
+
+    let albums = try reader.albums()
+    #expect(albums.map(\.path) == ["Andorra 2024", "Five Stars", "Recent Imports/March 7, 2026 at 11:48 AM", "Viajes/Andorra 2025"])
+    #expect(albums.first { $0.name == "March 7, 2026 at 11:48 AM" }?.isAuto == true)
+    #expect(albums.first { $0.name == "Five Stars" }?.isSmart == true)
+    #expect(PatternMatcher.albums(matching: "Andorra 20??", in: albums, includeAuto: false).count == 2)
+    #expect(PatternMatcher.albums(matching: "Viajes/*", in: albums, includeAuto: false).map(\.name) == ["Andorra 2025"])
+    #expect(PatternMatcher.albums(matching: "*", in: albums, includeAuto: false).count == 2)
+    #expect(PatternMatcher.albums(matching: "*", in: albums, includeAuto: true).count == 3)
+
+    let andorra2025 = try #require(albums.first { $0.name == "Andorra 2025" })
+    let photos = try reader.photos(in: andorra2025)
+    #expect(photos.count == 5)
+    let first = try #require(photos.first { $0.uuid == "U10" })
+    #expect(first.source?.path == fixture.bundle.appendingPathComponent("Originals/2026/01/01/1/IMG_0001.jpg").path)
+    #expect(first.rating == 5)
+    #expect(first.colorTag == .green)
+    #expect(first.keywords == ["David", "Judit"])
+    #expect(first.hierarchicalKeywords == ["Familia|David", "Judit"])
+    #expect(first.fields["ZIMAGE_CITY"] == "Andorra la Vella")
+    #expect(first.fields["ZCONTENT_DESCRIPTION"] == "Línea 1\nLínea 2 & más")
+
+    // Sin capa combinada: el ajuste (rating 3, rojo, David) pisa al defecto (vacío).
+    let merged = try #require(photos.first { $0.uuid == "U12" })
+    #expect(merged.rating == 3)
+    #expect(merged.colorTag == .red)
+    #expect(merged.keywords == ["David"])
+    let trashed = try #require(photos.first { $0.uuid == "U15" })
+    #expect(trashed.isTrashed)
+
+    let andorra2024 = try #require(albums.first { $0.name == "Andorra 2024" })
+    let external = try #require(try reader.photos(in: andorra2024).first)
+    #expect(external.source?.path == fixture.externalFolder.appendingPathComponent("EXT_0001.jpg").path)
+    #expect(!external.isInsideCatalog)
+}
+
+/// Lee el catálogo real del usuario si existe (solo lectura, vía copia temporal); si no, se omite.
+@Test func readsRealCatalogWhenAvailable() throws {
+    let url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Pictures/SonyA1.cocatalog")
+    guard FileManager.default.fileExists(atPath: url.path) else { return }
+    let reader = try CatalogReader(url: url)
+    #expect(reader.version?.format ?? 0 >= 160800)
+    let albums = try reader.albums()
+    #expect(albums.count > 50)
+    let matched = PatternMatcher.albums(matching: "Barcelona 202?", in: albums, includeAuto: false)
+    #expect(matched.map(\.name).sorted() == ["Barcelona 2024", "Barcelona 2025", "Barcelona 2026"])
+    let album = try #require(albums.first { $0.name == "Barcelona 2026" })
+    let photos = try reader.photos(in: album)
+    #expect(photos.count == 8)
+    #expect(photos.allSatisfy { $0.source.map { FileManager.default.fileExists(atPath: $0.path) } == true })
+    #expect(photos.allSatisfy { $0.fields["ZCONTACT_CREATOR"] == "© Cornellana" })
+}
+
+// MARK: - Exportación
+
+@Test func plansCopiesAndKeepsManifest() throws {
+    let fixture = try FixtureCatalog()
+    defer { fixture.cleanup() }
+    let reader = try CatalogReader(url: fixture.bundle)
+    let albums = try reader.albums()
+    let destination = fixture.root.appendingPathComponent("Export")
+    let options = ExportOptions(writeMetadata: false)
+
+    let plan = try ExportPlanner.plan(patterns: ["Andorra 20??"], selectedAlbumIDs: [], albums: albums, catalog: reader, options: options)
+    #expect(plan.matchedAlbums.count == 2)
+    #expect(plan.jobs.count == 6)
+    #expect(plan.plannedCount == 4)
+    #expect(plan.skippedTrashed == 1)
+    #expect(plan.missingSources == 1)
+    #expect(plan.insideCatalogCount == 3)
+
+    let engine = ExportEngine(catalog: reader, destination: destination, options: options, writer: nil)
+    let result = try engine.run(plan: plan) { _ in }
+    #expect(result.summary.successCount == 4)
+    let folder = destination.appendingPathComponent("Andorra 20/Andorra 2025")
+    let names = Set(try FileManager.default.contentsOfDirectory(atPath: folder.path))
+    #expect(names.isSuperset(of: ["IMG_0001.jpg", "IMG_0001_1.jpg", "IMG_0002.jpg", Manifest.filename]))
+    #expect(FileManager.default.fileExists(atPath: destination.appendingPathComponent("Andorra 20/Andorra 2024/EXT_0001.jpg").path))
+    #expect(result.summary.reportURL.map { FileManager.default.fileExists(atPath: $0.path) } == true)
+    // Los originales siguen en su sitio (copia, no movimiento).
+    #expect(FileManager.default.fileExists(atPath: fixture.bundle.appendingPathComponent("Originals/2026/01/01/1/IMG_0001.jpg").path))
+
+    // Segunda ejecución: nada se duplica.
+    let again = try engine.run(plan: plan) { _ in }
+    #expect(again.jobs.filter { $0.status == .alreadyExported }.count == 4)
+    #expect(try FileManager.default.contentsOfDirectory(atPath: folder.path).count == names.count)
+}
+
+@Test func writesAndVerifiesMetadataWithExiftool() throws {
+    guard let exiftool = ExifToolLocator.find() else {
+        Issue.record("exiftool no está instalado: prueba de metadatos omitida")
+        return
+    }
+    let fixture = try FixtureCatalog()
+    defer { fixture.cleanup() }
+    let reader = try CatalogReader(url: fixture.bundle)
+    let albums = try reader.albums()
+    let destination = fixture.root.appendingPathComponent("Export")
+    let options = ExportOptions()
+    let plan = try ExportPlanner.plan(patterns: ["Viajes/Andorra 2025"], selectedAlbumIDs: [], albums: albums, catalog: reader, options: options)
+    let engine = ExportEngine(catalog: reader, destination: destination, options: options, writer: ExifToolWriter(executable: exiftool))
+    let result = try engine.run(plan: plan) { _ in }
+    #expect(result.jobs.filter { $0.status == .done }.count == 3)
+
+    let written = try #require(result.jobs.first { $0.photo.uuid == "U10" }?.destination)
+    let read = try ExifToolWriter(executable: exiftool).readBack([written])[written.path]
+    #expect(read?.rating == 5)
+    #expect(read?.label == "Green")
+    #expect(read?.subject == ["David", "Judit"])
+    // -b devuelve el valor en bruto (con el salto de línea real, sin sustituirlo por un punto).
+    let description = try ExifToolLocator.run(exiftool, arguments: ["-b", "-XMP-dc:Description", written.path])
+    #expect(description == "Línea 1\nLínea 2 & más")
+    let city = try ExifToolLocator.run(exiftool, arguments: ["-b", "-XMP-photoshop:City", written.path])
+    #expect(city == "Andorra la Vella")
+}
