@@ -52,6 +52,7 @@ final class ExportViewModel {
     private var autoQuit = false
 
     init() {
+        ExportEngine.removeOrphanStagingDirectories()
         if let url = exiftoolURL {
             Task.detached { [url] in
                 let version = ExifToolLocator.version(of: url)

@@ -289,9 +289,21 @@ struct ExportEngine {
 
     // MARK: - Transferencias
 
+    private static let stagingPrefix = "AlbumExport-staging-"
+
     private func makeStagingDirectory() -> URL? {
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent("AlbumExport-staging-\(UUID().uuidString)", isDirectory: true)
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(Self.stagingPrefix + UUID().uuidString, isDirectory: true)
         return (try? FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)) != nil ? url : nil
+    }
+
+    /// Borra zonas de preparación de ejecuciones anteriores que no llegaron a limpiarse
+    /// (cierre forzado, caída). Se llama al arrancar la app; solo contienen copias, nunca originales.
+    static func removeOrphanStagingDirectories() {
+        let temp = FileManager.default.temporaryDirectory
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: temp.path)) ?? []
+        for name in names where name.hasPrefix(stagingPrefix) {
+            try? FileManager.default.removeItem(at: temp.appendingPathComponent(name))
+        }
     }
 
     /// Copia (o mueve) comprobando el tamaño al terminar.
