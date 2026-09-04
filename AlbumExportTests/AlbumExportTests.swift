@@ -230,10 +230,11 @@ struct FixtureCatalog {
     let orphan = fixture.bundle.appendingPathComponent("Originals/2026/01/01/1/ORPHAN.jpg")
     try FixtureCatalog.writeJPEG(to: orphan)
     try Data().write(to: fixture.bundle.appendingPathComponent("Originals/2026/01/01/1/.DS_Store"))   // oculto: se ignora
+    try Data("<xmp/>".utf8).write(to: fixture.bundle.appendingPathComponent("Originals/2026/01/01/1/IMG_0001.xmp"))   // lateral: no es huérfano
     let reader = try CatalogReader(url: fixture.bundle)
 
     let result = try CatalogVerifier.scan(catalog: reader)
-    #expect(result.filesOnDisk == 4)          // 3 registrados + el huérfano
+    #expect(result.filesOnDisk == 5)          // 3 registrados + el huérfano + el lateral
     #expect(result.referenced == 4)           // rutas distintas: la foto en papelera comparte fichero con otra
     #expect(result.orphans.map(\.relativePath) == ["Originals/2026/01/01/1/ORPHAN.jpg"])
     #expect(result.missing.map(\.filename) == ["MISSING.jpg"])
@@ -498,4 +499,17 @@ struct FixtureCatalog {
     #expect(description == "Línea 1\nLínea 2 & más")
     let city = try ExifToolLocator.run(exiftool, arguments: ["-b", "-XMP-photoshop:City", written.path])
     #expect(city == "Andorra la Vella")
+}
+
+/// Verificación del catálogo real (solo lectura), con tiempos y recuentos en el registro.
+@Test func verifiesRealCatalogWhenAvailable() throws {
+    let url = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Pictures/SonyA1.cocatalog")
+    guard FileManager.default.fileExists(atPath: url.path) else { return }
+    let start = Date()
+    let reader = try CatalogReader(url: url)
+    let result = try CatalogVerifier.scan(catalog: reader)
+    print("VERIFY-REAL files=\(result.filesOnDisk) referenced=\(result.referenced) orphans=\(result.orphans.count) missing=\(result.missing.count) unfiled=\(result.unfiled.count) matched=\(result.foundCount) seconds=\(Int(Date().timeIntervalSince(start)))")
+    for o in result.orphans.prefix(5) { print("VERIFY-REAL orphan \(o.relativePath) \(o.size)") }
+    for m in result.missing.prefix(5) { print("VERIFY-REAL missing \(m.expectedPath) -> \(m.candidate?.path ?? "-")") }
+    #expect(result.filesOnDisk > 0)
 }

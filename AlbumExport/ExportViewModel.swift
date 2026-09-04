@@ -72,6 +72,7 @@ final class ExportViewModel {
         autoRun = all.contains("--run")
         autoQuit = all.contains("--quit")
         if all.contains("--dump-layout") { scheduleLayoutDump() }
+        if all.contains("--verify") { action = .verify }
         if let i = all.firstIndex(of: "--move-to"), all.indices.contains(i + 1) {
             destinationCatalogURL = URL(fileURLWithPath: all[i + 1])
             options.move = true
@@ -218,7 +219,9 @@ final class ExportViewModel {
                 }
                 self.summary = nil
                 self.logLines = []
+                self.verifyResult = nil
                 refreshPlan()
+                if action == .verify { verifyCatalog() }
             } catch {
                 errorMessage = error.localizedDescription
             }
@@ -322,8 +325,9 @@ final class ExportViewModel {
     /// Al cambiar de acción: sincroniza el modo y recalcula el plan.
     func actionChanged() {
         options.move = action == .move
-        if action == .verify { showVerify = false }
         refreshPlan()
+        // Verificar no necesita más datos que el catálogo: se lanza sola al elegir la acción.
+        if action == .verify, worker != nil, verifyResult == nil { verifyCatalog() }
     }
 
     /// Botón principal según la acción: verificar, trasladar (con confirmación) o copiar.
@@ -440,6 +444,8 @@ final class ExportViewModel {
 
     private(set) var verifyResult: VerifyResult?
     private(set) var isVerifying = false
+    private(set) var verifyProgress = ""
+    private var verifyCancellation: CancellationToken?
     var showVerify = false
     var showMoveOrphansConfirmation = false
     var showRestoreConfirmation = false
@@ -449,17 +455,40 @@ final class ExportViewModel {
     /// Compara `Originals/` con el índice: huérfanos en disco, ficheros ausentes y fotos sin álbum.
     func verifyCatalog() {
         guard let worker, !isVerifying else { return }
+        let token = CancellationToken()
+        verifyCancellation = token
         isVerifying = true
         verifyResult = nil
         verifyMessage = nil
-        showVerify = true
+        verifyProgress = ""
         Task {
             do {
-                verifyResult = try await worker.verify()
+                let result = try await worker.verify(cancellation: token) { progress in
+                    Task { @MainActor in self.verifyProgress = Self.describe(progress) }
+                }
+                verifyResult = result
+                if autoQuit {
+                    FileHandle.standardError.write(Data("AlbumExport verify: files=\(result.filesOnDisk) orphans=\(result.orphans.count) missing=\(result.missing.count) unfiled=\(result.unfiled.count)\n".utf8))
+                }
             } catch {
-                errorMessage = error.localizedDescription
+                if !token.isCancelled { errorMessage = error.localizedDescription }
+                if autoQuit { FileHandle.standardError.write(Data("AlbumExport error: \(error.localizedDescription)\n".utf8)) }
             }
             isVerifying = false
+            verifyCancellation = nil
+            if autoQuit { NSApplication.shared.terminate(nil) }
+        }
+    }
+
+    func cancelVerify() {
+        verifyCancellation?.cancel()
+    }
+
+    private static func describe(_ progress: CatalogVerifier.Progress) -> String {
+        switch progress {
+        case .readingIndex: String(localized: "Reading the catalog index…", comment: "Progreso de verificación")
+        case .checkingMissing(let done, let total): String(localized: "Checking \(done) of \(total) indexed files…", comment: "Progreso de verificación")
+        case .scanningFiles(let count): String(localized: "Scanning Originals: \(count) files…", comment: "Progreso de verificación")
         }
     }
 

@@ -49,12 +49,26 @@ struct VerifyResult: Sendable {
 /// afecta a ficheros que el índice no conoce; la segunda solo crea ficheros que faltan.
 enum CatalogVerifier {
     static let originalsFolder = "Originals"
+    /// Ficheros laterales que acompañan a un original referenciado: no son huérfanos.
+    static let companionExtensions: Set<String> = ["xmp", "cos", "comask", "cop", "cof", "cot"]
 
-    static func scan(catalog: CatalogReader) throws -> VerifyResult {
+    /// Avance de la verificación, para la interfaz.
+    enum Progress: Sendable {
+        case readingIndex
+        case checkingMissing(done: Int, total: Int)
+        case scanningFiles(count: Int)
+    }
+
+    static func scan(catalog: CatalogReader, cancellation: CancellationToken? = nil,
+                     progress: (@Sendable (Progress) -> Void)? = nil) throws -> VerifyResult {
         var result = VerifyResult()
+        progress?(.readingIndex)
         let referenced = try catalog.referencedRelativePaths()
         result.referenced = referenced.count
-        result.missing = try catalog.missingFiles()
+        // Carpeta + nombre sin extensión de cada original referenciado, para reconocer laterales.
+        let referencedStems = Set(referenced.map { ($0 as NSString).deletingPathExtension })
+        result.missing = try catalog.missingFiles(cancellation: cancellation) { done, total in progress?(.checkingMissing(done: done, total: total)) }
+        if cancellation?.isCancelled == true { throw ExportInterruptionError.cancelled }
         result.unfiled = try catalog.imagesNotInAnyAlbum()
 
         let originals = catalog.rootURL.appendingPathComponent(originalsFolder, isDirectory: true)
@@ -64,16 +78,21 @@ enum CatalogVerifier {
             return result
         }
         for case let url as URL in enumerator {
+            if cancellation?.isCancelled == true { throw ExportInterruptionError.cancelled }
             let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
             guard values?.isRegularFile == true else { continue }
             result.filesOnDisk += 1
+            if result.filesOnDisk % 500 == 0 { progress?(.scanningFiles(count: result.filesOnDisk)) }
             let full = url.standardizedFileURL.path
             guard full.hasPrefix(rootPath + "/") else { continue }
             let relative = String(full.dropFirst(rootPath.count + 1))
             // APFS no distingue mayúsculas: se compara en minúsculas.
-            if !referenced.contains(relative.lowercased()) {
-                result.orphans.append(OrphanFile(relativePath: relative, url: url, size: Int64(values?.fileSize ?? 0)))
+            let lower = relative.lowercased()
+            if referenced.contains(lower) { continue }
+            if companionExtensions.contains((lower as NSString).pathExtension), referencedStems.contains((lower as NSString).deletingPathExtension) {
+                continue   // lateral (.xmp, .cos…) de un original que sí está en el índice
             }
+            result.orphans.append(OrphanFile(relativePath: relative, url: url, size: Int64(values?.fileSize ?? 0)))
         }
         result.orphans.sort { $0.relativePath < $1.relativePath }
         result.missing = matchOrphans(result.missing, orphans: result.orphans)
@@ -222,4 +241,11 @@ enum CatalogVerifier {
         for u in result.unfiled { lines.append([cell("not_in_album"), cell(u.path), "", ""].joined(separator: ",")) }
         try lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
     }
+}
+
+
+/// Error que señala una verificación cancelada por el usuario.
+enum ExportInterruptionError: Error, LocalizedError {
+    case cancelled
+    var errorDescription: String? { String(localized: "Cancelled by user", comment: "Motivo de interrupción") }
 }

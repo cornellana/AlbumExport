@@ -328,9 +328,20 @@ final class CatalogReader: @unchecked Sendable {
     }
 
     /// Imágenes del índice cuyo fichero no existe donde el catálogo espera (offline).
-    func missingFiles() throws -> [MissingFile] {
+    /// Los volúmenes no montados se resuelven sin consultar el disco, para no bloquearse.
+    func missingFiles(cancellation: CancellationToken? = nil, progress: ((Int, Int) -> Void)? = nil) throws -> [MissingFile] {
         var missing: [MissingFile] = []
-        for loc in try allImageLocations() {
+        let locations = try allImageLocations()
+        let mounted = Set((FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: nil, options: []) ?? []).map { $0.standardizedFileURL.path })
+        var checked = 0
+        for loc in locations {
+            if cancellation?.isCancelled == true { throw ExportInterruptionError.cancelled }
+            checked += 1
+            if checked % 500 == 0 { progress?(checked, locations.count) }
+            if !loc.relative, let root = loc.root, root.hasPrefix("/Volumes/"), !mounted.contains(where: { root.hasPrefix($0) }) {
+                missing.append(MissingFile(imageID: loc.id, filename: loc.filename, expectedPath: expectedURL(loc)?.path ?? "?", size: loc.size))
+                continue
+            }
             guard let url = expectedURL(loc) else {
                 missing.append(MissingFile(imageID: loc.id, filename: loc.filename, expectedPath: "?", size: loc.size))
                 continue

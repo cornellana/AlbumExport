@@ -481,6 +481,22 @@
         }
       }
     },
+    "Checking %lld of %lld indexed files…": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comprovant %lld de %lld fitxers indexats…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comprobando %lld de %lld ficheros indexados…"
+          }
+        }
+      }
+    },
     "Choose a Capture One catalog or session": {
       "localizations": {
         "ca": {
@@ -2241,6 +2257,22 @@
         }
       }
     },
+    "Reading the catalog index…": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Llegint l'índex del catàleg…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leyendo el índice del catálogo…"
+          }
+        }
+      }
+    },
     "Ready to verify": {
       "localizations": {
         "ca": {
@@ -2397,6 +2429,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Guardar informe…"
+          }
+        }
+      }
+    },
+    "Scanning Originals: %lld files…": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Explorant Originals: %lld fitxers…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Explorando Originals: %lld ficheros…"
           }
         }
       }

@@ -16,6 +16,8 @@ struct VerifyView: View {
                 HStack {
                     ProgressView().controlSize(.small)
                     Text("Verifying…")
+                    Text(verbatim: model.verifyProgress).foregroundStyle(.secondary)
+                    Button("Cancel") { model.cancelVerify() }
                 }
                 Spacer()
             } else if let result = model.verifyResult {

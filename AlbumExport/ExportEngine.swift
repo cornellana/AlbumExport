@@ -404,8 +404,8 @@ actor CatalogWorker {
         try reader.albums()
     }
 
-    func verify() throws -> VerifyResult {
-        try CatalogVerifier.scan(catalog: reader)
+    func verify(cancellation: CancellationToken? = nil, progress: (@Sendable (CatalogVerifier.Progress) -> Void)? = nil) throws -> VerifyResult {
+        try CatalogVerifier.scan(catalog: reader, cancellation: cancellation, progress: progress)
     }
 
     func moveOrphans(_ orphans: [OrphanFile], to folder: URL) -> [String: String] {
