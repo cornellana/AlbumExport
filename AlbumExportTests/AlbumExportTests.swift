@@ -546,8 +546,11 @@ struct FixtureCatalog {
     let other = fixture.root.appendingPathComponent("Disco/Backup/Otro.cocatalog/Originals/2024/05/05/7/MISSING.jpg")
     try FileManager.default.createDirectory(at: other.deletingLastPathComponent(), withIntermediateDirectories: true)
     try FixtureCatalog.writeJPEG(to: other)
-    let found = CatalogVerifier.search(missing, in: fixture.root.appendingPathComponent("Disco"), catalogRoot: fixture.bundle)
+    final class Box: @unchecked Sendable { var found: [(Int, URL)] = [] }
+    let box = Box()
+    let found = CatalogVerifier.search(missing, in: fixture.root.appendingPathComponent("Disco"), catalogRoot: fixture.bundle) { id, url in box.found.append((id, url)) }
     #expect(found.first?.candidate?.resolvingSymlinksInPath().path == other.resolvingSymlinksInPath().path)
+    #expect(box.found.map(\.0) == [14])   // avisado en vivo, una sola vez
     #expect(found.first?.candidateIsOrphan == false)
     #expect(CatalogVerifier.restore(found).isEmpty)
     #expect(FileManager.default.fileExists(atPath: other.path))   // copiado: el otro catálogo queda intacto

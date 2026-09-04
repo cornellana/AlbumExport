@@ -1393,6 +1393,22 @@
         }
       }
     },
+    "Found so far: %lld": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trobats fins ara: %lld"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encontrados hasta ahora: %lld"
+          }
+        }
+      }
+    },
     "Green": {
       "localizations": {
         "ca": {

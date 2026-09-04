@@ -164,12 +164,29 @@ enum CatalogVerifier {
     /// `folder` es `nil`, en los volúmenes indexados por Spotlight. Un candidato solo vale si
     /// coincide el tamaño registrado (cuando se conoce). Se ignora el propio catálogo y los
     /// perdidos ya resueltos con un huérfano.
+    /// - Parameters:
+    ///   - progress: ficheros recorridos hasta ahora.
+    ///   - onFound: se llama en cuanto un perdido queda emparejado, con su `imageID` y el fichero.
     static func search(_ missing: [MissingFile], in folder: URL?, catalogRoot: URL,
-                       cancellation: CancellationToken? = nil, progress: (@Sendable (Int) -> Void)? = nil) -> [MissingFile] {
+                       cancellation: CancellationToken? = nil, progress: (@Sendable (Int) -> Void)? = nil,
+                       onFound: (@Sendable (Int, URL) -> Void)? = nil) -> [MissingFile] {
         guard !missing.isEmpty else { return missing }
         var index: [String: [URL]] = [:]   // nombre en minúsculas -> rutas encontradas
-        let wanted = Set(missing.map { $0.filename.lowercased() })
+        let pending = missing.filter { $0.candidate == nil }
+        let wanted = Set(pending.map { $0.filename.lowercased() })
+        // Perdidos pendientes por nombre, para avisar en vivo al primer candidato válido.
+        var pendingByName: [String: [MissingFile]] = Dictionary(grouping: pending) { $0.filename.lowercased() }
         let rootPath = catalogRoot.standardizedFileURL.path + "/"
+        func consider(_ url: URL, name: String) {
+            index[name, default: []].append(url)
+            guard var items = pendingByName[name], !items.isEmpty else { return }
+            let size = ExportPlanner.fileSize(url)
+            if let i = items.firstIndex(where: { $0.size == nil || $0.size == 0 || $0.size == size }) {
+                onFound?(items[i].imageID, url)
+                items.remove(at: i)
+                pendingByName[name] = items
+            }
+        }
         if let folder {
             if let enumerator = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: [.isRegularFileKey], options: [.skipsHiddenFiles]) {
                 var scanned = 0
@@ -179,13 +196,14 @@ enum CatalogVerifier {
                     if scanned % 1000 == 0 { progress?(scanned) }
                     let name = url.lastPathComponent.lowercased()
                     guard wanted.contains(name), !url.standardizedFileURL.path.hasPrefix(rootPath) else { continue }
-                    index[name, default: []].append(url)
+                    consider(url, name: name)
                 }
             }
         } else {
             for name in wanted {
+                if cancellation?.isCancelled == true { break }
                 for path in spotlight(name: name) where !path.hasPrefix(rootPath) {
-                    index[name, default: []].append(URL(fileURLWithPath: path))
+                    consider(URL(fileURLWithPath: path), name: name)
                 }
             }
         }

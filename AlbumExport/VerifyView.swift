@@ -68,6 +68,14 @@ struct VerifyView: View {
                             }
                         }
                     }
+                    if model.isSearching {
+                        HStack {
+                            ProgressView().controlSize(.small)
+                            Text(verbatim: model.verifyProgress).foregroundStyle(.secondary)
+                            Text("Found so far: \(result.foundCount)").foregroundStyle(.green)
+                            Button("Cancel") { model.cancelVerify() }
+                        }
+                    }
                     HStack {
                         Menu("Search in…") {
                             ForEach(model.searchVolumes, id: \.self) { volume in
@@ -78,9 +86,9 @@ struct VerifyView: View {
                             Button("Spotlight (indexed volumes)") { model.searchMissingWithSpotlight() }
                         }
                         .fixedSize()
-                        .disabled(result.missing.isEmpty)
+                        .disabled(result.missing.isEmpty || model.isSearching)
                         Button("Restore found files into the catalog") { model.requestRestore() }
-                            .disabled(result.foundCount == 0)
+                            .disabled(result.foundCount == 0 || model.isSearching)
                         Text("Orphans inside the catalog are matched first (name and size) and restoring moves them into place; files found elsewhere are copied. Entries already indexed under another path are duplicate imports.")
                             .font(.caption).foregroundStyle(.secondary)
                     }

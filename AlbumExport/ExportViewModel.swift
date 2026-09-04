@@ -445,6 +445,8 @@ final class ExportViewModel {
     private(set) var verifyResult: VerifyResult?
     private(set) var isVerifying = false
     private(set) var verifyProgress = ""
+    /// Búsqueda de perdidos en curso: la tabla sigue visible y se va rellenando.
+    private(set) var isSearching = false
     private var verifyCancellation: CancellationToken?
     var showVerify = false
     var showMoveOrphansConfirmation = false
@@ -552,20 +554,29 @@ final class ExportViewModel {
         guard let worker, let result = verifyResult, !result.missing.isEmpty else { return }
         let token = CancellationToken()
         verifyCancellation = token
-        isVerifying = true
+        isSearching = true
         let where_ = folder?.path ?? "Spotlight"
         verifyProgress = String(localized: "Searching in \(where_)…", comment: "Progreso de búsqueda de perdidos")
         Task {
-            let updated = await worker.searchMissing(result.missing, in: folder, cancellation: token) { scanned in
+            let updated = await worker.searchMissing(result.missing, in: folder, cancellation: token, progress: { scanned in
                 Task { @MainActor in
                     self.verifyProgress = String(localized: "Searching in \(where_): \(scanned) files checked…", comment: "Progreso de búsqueda de perdidos")
                 }
-            }
+            }, onFound: { imageID, url in
+                Task { @MainActor in
+                    // Aparece en la tabla en cuanto se encuentra, sin esperar al final.
+                    if let i = self.verifyResult?.missing.firstIndex(where: { $0.imageID == imageID }) {
+                        self.verifyResult?.missing[i].candidate = url
+                        self.verifyResult?.missing[i].candidateIsOrphan = false
+                    }
+                }
+            })
             verifyCancellation = nil
+            isSearching = false
             verifyResult?.missing = updated
             let found = updated.filter { $0.candidate != nil }.count
             verifyMessage = String(localized: "Found \(found) of \(updated.count) missing files", comment: "Resumen de búsqueda")
-            isVerifying = false
+            verifyProgress = ""
         }
     }
 
