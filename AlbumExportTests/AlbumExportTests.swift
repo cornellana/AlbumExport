@@ -319,6 +319,37 @@ struct FixtureCatalog {
     #expect(Manifest(folder: folder).entries["U11"]?.file == "IMG_0002_1.jpg")
 }
 
+/// Varios fallos de copia seguidos (carpeta sin permiso de escritura) detienen la exportación
+/// como destino inaccesible, dejando el resto pendiente y sin marcar todo como error.
+@Test func stopsAfterConsecutiveCopyFailures() throws {
+    let fixture = try FixtureCatalog()
+    defer { fixture.cleanup() }
+    let reader = try CatalogReader(url: fixture.bundle)
+    let albums = try reader.albums()
+    let destination = fixture.root.appendingPathComponent("Export")
+    let options = ExportOptions(writeMetadata: false)
+    let plan = try ExportPlanner.plan(patterns: ["Andorra 20??"], selectedAlbumIDs: [], albums: albums, catalog: reader, options: options)
+    #expect(plan.plannedCount == 4)
+    let folder = destination.appendingPathComponent("Andorra 20/Andorra 2025")
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: folder.path)
+    defer { try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: folder.path) }
+
+    let result = try ExportEngine(catalog: reader, destination: destination, options: options, writer: nil, cancellation: CancellationToken()).run(plan: plan) { _ in }
+    #expect(result.summary.interruption == .destinationUnavailable(destination.path))
+    let failed = result.jobs.filter { if case .failed = $0.status { return true } else { return false } }
+    #expect(failed.count == ExportEngine.maxConsecutiveFailures)
+    // La foto del otro álbum (carpeta escribible, va antes en el orden) sí se copió.
+    #expect(result.jobs.first { $0.album.name == "Andorra 2024" }?.status == .doneWithoutMetadata)
+
+    // Recuento tras la ejecución: lo fallido vuelve a contar como pendiente, lo hecho como exportado.
+    var after = plan
+    after.jobs = result.jobs
+    after.recount()
+    #expect(after.plannedCount == 3)
+    #expect(after.alreadyExportedCount == 1)
+}
+
 @Test func writesAndVerifiesMetadataWithExiftool() throws {
     guard let exiftool = ExifToolLocator.find() else {
         Issue.record("exiftool no está instalado: prueba de metadatos omitida")

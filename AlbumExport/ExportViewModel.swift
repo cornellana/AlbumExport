@@ -258,26 +258,37 @@ final class ExportViewModel {
     }
 
     func runExport() {
-        guard let worker, let destination = destinationURL, let plan else { return }
+        guard let worker, let destination = destinationURL, plan != nil else { return }
         let writer = options.writeMetadata ? exiftoolURL.map { ExifToolWriter(executable: $0) } : nil
         let options = options
+        let patterns = patterns
+        let selected = selectedAlbumIDs
+        let albums = albums
         let token = CancellationToken()
         cancellation = token
+        planGeneration += 1   // invalida planificaciones en curso: la de abajo manda
         isRunning = true
         summary = nil
         logLines = []
         progressCompleted = 0
-        progressTotal = plan.plannedCount
+        progressTotal = plan?.plannedCount ?? 0
         bytesDone = 0
         bytesTransferred = 0
         throughput = nil
         startDate = Date()
         Task {
             do {
+                // Siempre se parte de un plan recién calculado contra el destino actual: así una
+                // ejecución anterior (a otro destino, o con errores) no deja estados heredados.
+                var plan = try await worker.plan(patterns: patterns, selectedAlbumIDs: selected, albums: albums, options: options, destination: destination)
+                self.plan = plan
+                progressTotal = plan.plannedCount
                 let result = try await worker.export(plan: plan, destination: destination, options: options, writer: writer, cancellation: token) { event in
                     Task { @MainActor in self.handle(event) }
                 }
-                self.plan?.jobs = result.jobs
+                plan.jobs = result.jobs
+                plan.recount()
+                self.plan = plan
                 self.summary = result.summary
                 rememberThroughput(bytes: result.summary.bytesTransferred)
             } catch {

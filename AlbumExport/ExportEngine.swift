@@ -66,6 +66,8 @@ struct ExportEngine {
 
     /// Tamaño de lote: acota la pérdida ante un corte y la longitud del argfile de exiftool.
     static let batchSize = 40
+    /// Fallos de copia seguidos a partir de los cuales se da el destino por inaccesible.
+    static let maxConsecutiveFailures = 3
 
     /// `true` si el destino está en un volumen que no es local (NAS, SMB, AFP).
     static func isNetworkVolume(_ url: URL) -> Bool {
@@ -93,6 +95,14 @@ struct ExportEngine {
         var bytesDone: Int64 = 0
         var bytesTransferred: Int64 = 0
         var interruption: ExportInterruption?
+        // Un NAS caído puede seguir "existiendo" como punto de montaje: varios fallos seguidos
+        // de copia se tratan como destino inaccesible en vez de fallar foto a foto hasta el final.
+        var consecutiveFailures = 0
+
+        func noteFailure() -> Bool {
+            consecutiveFailures += 1
+            return consecutiveFailures >= Self.maxConsecutiveFailures || !FileManager.default.fileExists(atPath: destination.path)
+        }
 
         // Zona local de preparación: solo al copiar hacia un volumen de red. Al mover no se
         // usa, para que un fallo a medias nunca deje originales en una carpeta temporal.
@@ -116,10 +126,6 @@ struct ExportEngine {
 
         func saveManifests() {
             for manifest in manifests.values { try? manifest.save() }
-        }
-
-        func destinationGone() -> Bool {
-            !FileManager.default.fileExists(atPath: destination.path)
         }
 
         let batches = stride(from: 0, to: pending.count, by: Self.batchSize).map { Array(pending[$0..<min($0 + Self.batchSize, pending.count)]) }
@@ -176,6 +182,7 @@ struct ExportEngine {
                     ?? target.deletingLastPathComponent().appendingPathComponent(Manifest.partialPrefix + target.lastPathComponent)
                 do {
                     try transfer(from: source, to: workURL)
+                    consecutiveFailures = 0
                     jobs[index].destination = target
                     jobs[index].status = .copied
                     works.append(Work(index: index, folder: folder, workURL: workURL, finalURL: target, needsUpload: staging != nil, bytes: size))
@@ -190,7 +197,7 @@ struct ExportEngine {
                 } catch {
                     jobs[index].status = .failed(error.localizedDescription)
                     events(.log(String(localized: "Failed to copy \(job.photo.filename): \(error.localizedDescription)", comment: "Línea de registro")))
-                    if destinationGone() { interruption = .destinationUnavailable(destination.path); break }
+                    if noteFailure() { interruption = .destinationUnavailable(destination.path); break }
                 }
             }
 
@@ -226,11 +233,16 @@ struct ExportEngine {
                 let job = jobs[work.index]
                 let failed: Bool
                 if case .failed = job.status { failed = true } else { failed = false }
-                if failed || interruption != nil {
-                    // Descartar la copia de trabajo (al mover, devolver el original a su sitio).
+                // Se descarta la copia de trabajo si falló o si, tras una interrupción, aún había que
+                // subirla a un destino en red. Una copia local ya terminada se conserva aunque se
+                // interrumpa: solo le faltarán los metadatos, que se escriben al reanudar.
+                if failed || (interruption != nil && work.needsUpload) {
                     discard(work, sourceURL: job.photo.source)
                     if interruption != nil, job.status == .copied { jobs[work.index].status = .pending }
                     continue
+                }
+                if interruption != nil, job.status == .copied, !options.writeMetadata {
+                    jobs[work.index].status = .doneWithoutMetadata
                 }
                 if work.workURL != work.finalURL {
                     do {
@@ -244,11 +256,12 @@ struct ExportEngine {
                             try FileManager.default.moveItem(at: work.workURL, to: work.finalURL)
                             try? moveSidecar(from: work.workURL, to: work.finalURL)
                         }
+                        consecutiveFailures = 0
                     } catch {
                         jobs[work.index].status = .failed(error.localizedDescription)
                         events(.log(String(localized: "Failed to copy \(job.photo.filename): \(error.localizedDescription)", comment: "Línea de registro")))
                         discard(work, sourceURL: job.photo.source)
-                        if destinationGone() { interruption = .destinationUnavailable(destination.path) }
+                        if noteFailure() { interruption = .destinationUnavailable(destination.path) }
                         continue
                     }
                 }

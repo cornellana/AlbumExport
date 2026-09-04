@@ -156,6 +156,27 @@ struct ExportPlan: Sendable {
     /// Fotos que el manifiesto del destino ya da por completas (no se transferirán).
     var alreadyExportedCount = 0
     var matchedAlbums: [Album] = []
+
+    /// Recalcula los totales a partir del estado actual de los trabajos (tras una ejecución):
+    /// lo conseguido pasa a "ya exportado" y lo fallido vuelve a contar como pendiente.
+    mutating func recount() {
+        plannedCount = 0
+        totalBytes = 0
+        insideCatalogCount = 0
+        alreadyExportedCount = 0
+        for job in jobs {
+            switch job.status {
+            case .skippedTrashed, .missingSource:
+                continue
+            case .done, .doneWithoutMetadata, .alreadyExported:
+                alreadyExportedCount += 1
+            default:
+                plannedCount += 1
+                if let source = job.photo.source { totalBytes += ExportPlanner.fileSize(source) }
+                if job.photo.isInsideCatalog { insideCatalogCount += 1 }
+            }
+        }
+    }
 }
 
 /// Resultado final de una exportación.
