@@ -1313,6 +1313,22 @@
         }
       }
     },
+    "Size mismatch after copy: %@ instead of %@": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mida diferent després de copiar: %@ en comptes de %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tamaño distinto tras copiar: %@ en vez de %@"
+          }
+        }
+      }
+    },
     "Skipped (file not found)": {
       "localizations": {
         "ca": {

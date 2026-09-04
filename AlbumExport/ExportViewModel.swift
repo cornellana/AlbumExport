@@ -48,6 +48,8 @@ final class ExportViewModel {
     private(set) var exiftoolVersion: String?
 
     private var planGeneration = 0
+    private var autoRun = false
+    private var autoQuit = false
 
     init() {
         if let url = exiftoolURL {
@@ -57,7 +59,10 @@ final class ExportViewModel {
             }
         }
         // Argumentos de línea de comandos (útil para automatizar y para pruebas):
-        //   AlbumExport <catálogo> [<destino>] [<patrones separados por ;>]
+        //   AlbumExport <catálogo> [<destino>] [<patrones separados por ;>] [--run] [--quit]
+        // --run lanza la exportación en cuanto el plan está listo; --quit cierra la app al acabar.
+        autoRun = CommandLine.arguments.contains("--run")
+        autoQuit = CommandLine.arguments.contains("--quit")
         let arguments = CommandLine.arguments.dropFirst().filter { !$0.hasPrefix("-") }
         if let catalogPath = arguments.first, FileManager.default.fileExists(atPath: catalogPath) {
             if arguments.count > 1 { destinationURL = URL(fileURLWithPath: arguments[arguments.startIndex + 1]) }
@@ -178,6 +183,10 @@ final class ExportViewModel {
                 let plan = try await worker.plan(patterns: patterns, selectedAlbumIDs: selected, albums: albums, options: options)
                 guard generation == planGeneration else { return }
                 self.plan = plan
+                if autoRun, !isRunning, canExport {
+                    autoRun = false
+                    runExport()
+                }
             } catch {
                 guard generation == planGeneration else { return }
                 errorMessage = error.localizedDescription
@@ -226,6 +235,7 @@ final class ExportViewModel {
             }
             isRunning = false
             cancellation = nil
+            if autoQuit { NSApplication.shared.terminate(nil) }
         }
     }
 

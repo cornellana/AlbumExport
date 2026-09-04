@@ -71,8 +71,12 @@ enum ExportPlanner {
         return plan
     }
 
+    /// Tamaño actual del fichero en disco.
+    ///
+    /// Se consulta con `FileManager` y no con `URL.resourceValues`, que cachea el valor en
+    /// la instancia de URL: tras reescribir el fichero (exiftool) devolvería el tamaño antiguo.
     static func fileSize(_ url: URL) -> Int64 {
-        (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize).flatMap { Int64($0) } ?? 0
+        ((try? FileManager.default.attributesOfItem(atPath: url.path))?[.size] as? NSNumber)?.int64Value ?? 0
     }
 }
 
@@ -122,6 +126,11 @@ struct Manifest {
             return nil
         }
         return (url, entry.metadataDone)
+    }
+
+    /// `true` si ningún registro del manifiesto reclama ese nombre de fichero.
+    func isUnclaimed(filename: String) -> Bool {
+        !entries.values.contains { $0.file.caseInsensitiveCompare(filename) == .orderedSame }
     }
 
     mutating func record(uuid: String, filename: String, metadataDone: Bool) {

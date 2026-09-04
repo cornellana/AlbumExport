@@ -24,6 +24,19 @@ enum ExportInterruption: Equatable, Sendable {
     }
 }
 
+/// Errores propios del motor, con detalle suficiente para diagnosticar.
+enum ExportError: Error, LocalizedError {
+    case sizeMismatch(expected: Int64, actual: Int64)
+
+    var errorDescription: String? {
+        switch self {
+        case .sizeMismatch(let expected, let actual):
+            String(localized: "Size mismatch after copy: \(actual.formatted(.byteCount(style: .file))) instead of \(expected.formatted(.byteCount(style: .file)))",
+                   comment: "Error de copia con tamaños")
+        }
+    }
+}
+
 /// Señal de cancelación compartida entre la interfaz y el motor.
 final class CancellationToken: @unchecked Sendable {
     private let lock = NSLock()
@@ -140,6 +153,21 @@ struct ExportEngine {
                         jobs[index].status = .copied
                         works.append(Work(index: index, folder: folder, workURL: existing.url, finalURL: existing.url, needsUpload: false, bytes: 0))
                     }
+                    continue
+                }
+
+                // Fichero con el mismo nombre y tamaño ya presente pero sin registrar (copia manual
+                // o versión anterior de la app): se adopta en vez de duplicarlo con sufijo.
+                let sameName = folder.appendingPathComponent(job.photo.filename)
+                if manifests[folder]?.isUnclaimed(filename: job.photo.filename) == true,
+                   FileManager.default.fileExists(atPath: sameName.path), ExportPlanner.fileSize(sameName) == size {
+                    jobs[index].destination = sameName
+                    jobs[index].status = .copied
+                    allocators[folder]?.reserve(job.photo.filename)
+                    manifests[folder]?.record(uuid: job.photo.uuid, filename: job.photo.filename, metadataDone: false)
+                    completed += 1
+                    bytesDone += size
+                    works.append(Work(index: index, folder: folder, workURL: sameName, finalURL: sameName, needsUpload: false, bytes: 0))
                     continue
                 }
 
@@ -263,7 +291,8 @@ struct ExportEngine {
             } else {
                 try FileManager.default.copyItem(at: source, to: target)
             }
-            guard ExportPlanner.fileSize(target) == expected else { throw CocoaError(.fileWriteUnknown) }
+            let actual = ExportPlanner.fileSize(target)
+            guard actual == expected else { throw ExportError.sizeMismatch(expected: expected, actual: actual) }
         } catch {
             if options.move, FileManager.default.fileExists(atPath: target.path), !FileManager.default.fileExists(atPath: source.path) {
                 try? FileManager.default.moveItem(at: target, to: source)
@@ -280,7 +309,9 @@ struct ExportEngine {
         try? FileManager.default.removeItem(at: partial)
         do {
             try FileManager.default.copyItem(at: work.workURL, to: partial)
-            guard ExportPlanner.fileSize(partial) == ExportPlanner.fileSize(work.workURL) else { throw CocoaError(.fileWriteUnknown) }
+            let expected = ExportPlanner.fileSize(work.workURL)
+            let actual = ExportPlanner.fileSize(partial)
+            guard actual == expected else { throw ExportError.sizeMismatch(expected: expected, actual: actual) }
             try FileManager.default.moveItem(at: partial, to: work.finalURL)
         } catch {
             try? FileManager.default.removeItem(at: partial)

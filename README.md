@@ -55,6 +55,12 @@ o se cierra la app:
 - Al volver a pulsar **Export** con el mismo destino, las fotos completas se marcan
   *Already exported*, las que quedaron sin metadatos los reciben, las truncadas se copian
   de nuevo y solo se transfiere lo que falta.
+- Un fichero ya presente en la carpeta con el **mismo nombre y tamaño** que el original
+  (copia manual, o hecha con una versión anterior sin manifiesto) se adopta: se registra,
+  recibe los metadatos y no se duplica con sufijo `_1`.
+
+Para automatizar o probar: `AlbumExport <catálogo> <destino> "<patrones>" --run --quit`
+lanza la exportación al arrancar y cierra la app al terminar.
 
 ## Estimación de tiempo
 

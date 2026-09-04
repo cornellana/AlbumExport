@@ -274,6 +274,40 @@ struct FixtureCatalog {
     #expect(result.jobs.first { $0.photo.uuid == "U10" }?.status == .doneWithoutMetadata)
 }
 
+/// `fileSize` debe reflejar el tamaño actual aunque el fichero se haya reescrito (URL cachea atributos).
+@Test func fileSizeIsAlwaysFresh() throws {
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent("size-\(UUID().uuidString).bin")
+    defer { try? FileManager.default.removeItem(at: url) }
+    try Data(count: 10).write(to: url)
+    #expect(ExportPlanner.fileSize(url) == 10)
+    try Data(count: 25).write(to: url)
+    #expect(ExportPlanner.fileSize(url) == 25)
+}
+
+/// Ficheros ya presentes con el mismo nombre y tamaño (sin manifiesto) se adoptan en vez de duplicarse.
+@Test func adoptsExistingFilesWithoutManifest() throws {
+    let fixture = try FixtureCatalog()
+    defer { fixture.cleanup() }
+    let reader = try CatalogReader(url: fixture.bundle)
+    let albums = try reader.albums()
+    let destination = fixture.root.appendingPathComponent("Export")
+    let options = ExportOptions(writeMetadata: false)
+    let plan = try ExportPlanner.plan(patterns: ["Viajes/Andorra 2025"], selectedAlbumIDs: [], albums: albums, catalog: reader, options: options)
+    let folder = destination.appendingPathComponent("Viajes Andorra 2025/Andorra 2025")
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+    // Copia previa hecha a mano (mismo contenido) y otra de distinto tamaño (no adoptable).
+    try FileManager.default.copyItem(at: fixture.bundle.appendingPathComponent("Originals/2026/01/01/1/IMG_0001.jpg"), to: folder.appendingPathComponent("IMG_0001.jpg"))
+    try Data([1, 2, 3]).write(to: folder.appendingPathComponent("IMG_0002.jpg"))
+
+    let result = try ExportEngine(catalog: reader, destination: destination, options: options, writer: nil, cancellation: CancellationToken()).run(plan: plan) { _ in }
+    #expect(result.summary.successCount == 3)
+    let names = Set(try FileManager.default.contentsOfDirectory(atPath: folder.path))
+    // IMG_0001 adoptado (sin _1); IMG_0002 de distinto tamaño se conserva y la foto va a IMG_0002_1.
+    #expect(names == ["IMG_0001.jpg", "IMG_0001_1.jpg", "IMG_0002.jpg", "IMG_0002_1.jpg", Manifest.filename])
+    #expect(Manifest(folder: folder).entries["U10"]?.file == "IMG_0001.jpg")
+    #expect(Manifest(folder: folder).entries["U11"]?.file == "IMG_0002_1.jpg")
+}
+
 @Test func writesAndVerifiesMetadataWithExiftool() throws {
     guard let exiftool = ExifToolLocator.find() else {
         Issue.record("exiftool no está instalado: prueba de metadatos omitida")
