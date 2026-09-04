@@ -26,12 +26,22 @@ enum ExportPlanner {
     /// - Parameters:
     ///   - patterns: Patrones con comodines escritos por el usuario.
     ///   - selectedAlbumIDs: Álbumes marcados a mano en la lista (se unen a los patrones).
+    ///   - destination: Si se conoce, se consultan sus manifiestos para marcar de antemano
+    ///     las fotos ya exportadas (sin tocar nada en disco).
     static func plan(patterns: [String], selectedAlbumIDs: Set<Int>, albums: [Album],
-                     catalog: CatalogReader, options: ExportOptions) throws -> ExportPlan {
+                     catalog: CatalogReader, options: ExportOptions, destination: URL? = nil) throws -> ExportPlan {
         var plan = ExportPlan()
         var jobs: [ExportJob] = []
         var seenAlbums: Set<Int> = []
         var nextID = 0
+        var manifests: [URL: Manifest] = [:]
+
+        func alreadyExported(_ job: ExportJob, size: Int64) -> Bool {
+            guard let destination, !options.refreshExisting else { return false }
+            let folder = folder(for: job.pattern, album: job.album, in: destination)
+            if manifests[folder] == nil { manifests[folder] = Manifest(folder: folder) }
+            return manifests[folder]?.existingFile(for: job.photo.uuid, expectedSize: size, repair: false)?.metadataDone == true
+        }
 
         func add(album: Album, pattern: String) throws {
             guard !seenAlbums.contains(album.id) else { return }
@@ -59,8 +69,14 @@ enum ExportPlanner {
                 jobs[index].status = .skippedTrashed
                 plan.skippedTrashed += 1
             } else if let source = photo.source, FileManager.default.fileExists(atPath: source.path) {
+                let size = fileSize(source)
+                if alreadyExported(jobs[index], size: size) {
+                    jobs[index].status = .alreadyExported
+                    plan.alreadyExportedCount += 1
+                    continue
+                }
                 plan.plannedCount += 1
-                plan.totalBytes += fileSize(source)
+                plan.totalBytes += size
                 if photo.isInsideCatalog { plan.insideCatalogCount += 1 }
             } else {
                 jobs[index].status = .missingSource
@@ -115,14 +131,15 @@ struct Manifest {
     }
 
     /// Fichero ya exportado para esa imagen, si existe y tiene el tamaño esperado.
-    /// Un fichero truncado por un corte se elimina para copiarlo de nuevo.
-    func existingFile(for uuid: String, expectedSize: Int64) -> (url: URL, metadataDone: Bool)? {
+    /// - Parameter repair: Si es `true`, un fichero truncado por un corte se elimina para
+    ///   copiarlo de nuevo (solo durante la exportación, nunca al planificar).
+    func existingFile(for uuid: String, expectedSize: Int64, repair: Bool = true) -> (url: URL, metadataDone: Bool)? {
         guard let entry = entries[uuid] else { return nil }
         let url = folder.appendingPathComponent(entry.file)
         guard FileManager.default.fileExists(atPath: url.path) else { return nil }
         // Tras escribir XMP el tamaño cambia unos KB; solo se desconfía si aún no se escribieron metadatos.
         if !entry.metadataDone, ExportPlanner.fileSize(url) != expectedSize {
-            try? FileManager.default.removeItem(at: url)
+            if repair { try? FileManager.default.removeItem(at: url) }
             return nil
         }
         return (url, entry.metadataDone)

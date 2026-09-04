@@ -372,8 +372,8 @@ actor CatalogWorker {
         try reader.albums()
     }
 
-    func plan(patterns: [String], selectedAlbumIDs: Set<Int>, albums: [Album], options: ExportOptions) throws -> ExportPlan {
-        try ExportPlanner.plan(patterns: patterns, selectedAlbumIDs: selectedAlbumIDs, albums: albums, catalog: reader, options: options)
+    func plan(patterns: [String], selectedAlbumIDs: Set<Int>, albums: [Album], options: ExportOptions, destination: URL?) throws -> ExportPlan {
+        try ExportPlanner.plan(patterns: patterns, selectedAlbumIDs: selectedAlbumIDs, albums: albums, catalog: reader, options: options, destination: destination)
     }
 
     func export(plan: ExportPlan, destination: URL, options: ExportOptions, writer: ExifToolWriter?, cancellation: CancellationToken,

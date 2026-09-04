@@ -231,6 +231,17 @@ struct FixtureCatalog {
     let again = try engine.run(plan: plan) { _ in }
     #expect(again.jobs.filter { $0.status == .alreadyExported }.count == 4)
     #expect(try FileManager.default.contentsOfDirectory(atPath: folder.path).count == names.count)
+
+    // Al planificar con el destino conocido, lo completo ya se marca y sale del recuento.
+    let replanned = try ExportPlanner.plan(patterns: ["Andorra 20??"], selectedAlbumIDs: [], albums: albums, catalog: reader, options: options, destination: destination)
+    #expect(replanned.alreadyExportedCount == 4)
+    #expect(replanned.plannedCount == 0)
+    #expect(replanned.totalBytes == 0)
+    #expect(replanned.jobs.filter { $0.status == .alreadyExported }.count == 4)
+    // Con "refrescar" vuelven a estar pendientes.
+    let refresh = try ExportPlanner.plan(patterns: ["Andorra 20??"], selectedAlbumIDs: [], albums: albums, catalog: reader,
+                                         options: ExportOptions(writeMetadata: false, refreshExisting: true), destination: destination)
+    #expect(refresh.plannedCount == 4)
 }
 
 /// Simula un corte: fichero truncado, manifiesto con metadatos pendientes, resto parcial y cancelación.

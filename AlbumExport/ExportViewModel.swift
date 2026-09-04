@@ -202,7 +202,7 @@ final class ExportViewModel {
             return
         }
         destinationURL = url
-        saveSession()
+        refreshPlan()   // el manifiesto del nuevo destino decide qué está ya exportado
     }
 
     func toggleAlbum(_ album: Album) {
@@ -226,10 +226,11 @@ final class ExportViewModel {
         let selected = selectedAlbumIDs
         let albums = albums
         let options = options
+        let destination = destinationURL
         isPlanning = true
         Task {
             do {
-                let plan = try await worker.plan(patterns: patterns, selectedAlbumIDs: selected, albums: albums, options: options)
+                let plan = try await worker.plan(patterns: patterns, selectedAlbumIDs: selected, albums: albums, options: options, destination: destination)
                 guard generation == planGeneration else { return }
                 self.plan = plan
                 if autoRun, !isRunning, canExport {

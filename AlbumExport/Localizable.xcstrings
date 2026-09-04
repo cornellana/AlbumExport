@@ -193,6 +193,22 @@
         }
       }
     },
+    "Already exported: %lld": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ja exportades: %lld"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ya exportadas: %lld"
+          }
+        }
+      }
+    },
     "Andorra 20??; Isla*": {
       "localizations": {
         "ca": {

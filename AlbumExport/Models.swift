@@ -153,6 +153,8 @@ struct ExportPlan: Sendable {
     var insideCatalogCount = 0
     var skippedTrashed = 0
     var missingSources = 0
+    /// Fotos que el manifiesto del destino ya da por completas (no se transferirán).
+    var alreadyExportedCount = 0
     var matchedAlbums: [Album] = []
 }
 

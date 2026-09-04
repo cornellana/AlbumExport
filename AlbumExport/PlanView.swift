@@ -122,6 +122,9 @@ struct SummaryBarView: View {
                 } else {
                     Text("\(plan.plannedCount) photos to copy, \(size)").fontWeight(.semibold)
                 }
+                if plan.alreadyExportedCount > 0 {
+                    Text("Already exported: \(plan.alreadyExportedCount)").foregroundStyle(.secondary)
+                }
                 Text("Inside catalog bundle: \(plan.insideCatalogCount)")
                 Text("Skipped: \(plan.skippedTrashed) in trash, \(plan.missingSources) not found")
                 Spacer()
@@ -164,18 +167,24 @@ struct JobsTableView: View {
 
     var body: some View {
         Table(jobs) {
-            TableColumn("Album") { job in Text(verbatim: job.album.name) }
-            TableColumn("File") { job in Text(verbatim: job.photo.filename) }
-            TableColumn("Rating") { job in StarsView(rating: job.photo.rating ?? 0) }
+            TableColumn("Album") { job in Text(verbatim: job.album.name).opacity(opacity(job)) }
+            TableColumn("File") { job in Text(verbatim: job.photo.filename).opacity(opacity(job)) }
+            TableColumn("Rating") { job in StarsView(rating: job.photo.rating ?? 0).opacity(opacity(job)) }
                 .width(90)
-            TableColumn("Color") { job in ColorDotView(tag: job.photo.colorTag ?? .none) }
+            TableColumn("Color") { job in ColorDotView(tag: job.photo.colorTag ?? .none).opacity(opacity(job)) }
                 .width(50)
-            TableColumn("Keywords") { job in Text(verbatim: job.photo.keywords.joined(separator: ", ")) }
+            TableColumn("Keywords") { job in Text(verbatim: job.photo.keywords.joined(separator: ", ")).opacity(opacity(job)) }
             TableColumn("Status") { job in
                 Text(verbatim: job.status.label)
                     .foregroundStyle(statusColor(job.status))
+                    .opacity(opacity(job))
             }
         }
+    }
+
+    /// Las fotos ya copiadas (antes o en esta ejecución) se atenúan para destacar lo pendiente.
+    private func opacity(_ job: ExportJob) -> Double {
+        job.status.isSuccess ? 0.4 : 1
     }
 
     private func statusColor(_ status: JobStatus) -> Color {
