@@ -18,6 +18,8 @@ struct MissingFile: Identifiable, Hashable, Sendable {
     let size: Int64?
     /// Fichero encontrado en disco con el mismo nombre (y tamaño, si se conoce).
     var candidate: URL?
+    /// El candidato es un huérfano dentro del propio bundle: restaurar lo mueve en vez de copiarlo.
+    var candidateIsOrphan = false
     var id: Int { imageID }
 }
 
@@ -74,7 +76,31 @@ enum CatalogVerifier {
             }
         }
         result.orphans.sort { $0.relativePath < $1.relativePath }
+        result.missing = matchOrphans(result.missing, orphans: result.orphans)
         return result
+    }
+
+    /// Primera comprobación, sin salir del bundle: un perdido puede ser un huérfano que cambió
+    /// de carpeta. Se emparejan por nombre y tamaño; cada huérfano se usa una sola vez.
+    static func matchOrphans(_ missing: [MissingFile], orphans: [OrphanFile]) -> [MissingFile] {
+        var available: [String: [OrphanFile]] = [:]
+        for orphan in orphans {
+            available[(orphan.relativePath as NSString).lastPathComponent.lowercased(), default: []].append(orphan)
+        }
+        return missing.map { item in
+            guard item.candidate == nil else { return item }
+            var updated = item
+            let name = item.filename.lowercased()
+            if let index = available[name]?.firstIndex(where: { orphan in
+                guard let size = item.size, size > 0 else { return true }
+                return orphan.size == size
+            }) {
+                let orphan = available[name]!.remove(at: index)
+                updated.candidate = orphan.url
+                updated.candidateIsOrphan = true
+            }
+            return updated
+        }
     }
 
     // MARK: - Huérfanos
@@ -101,9 +127,16 @@ enum CatalogVerifier {
 
     // MARK: - Perdidos
 
-    /// Busca los ficheros perdidos por nombre en una carpeta (recursivo) o, si `folder` es
-    /// `nil`, en todo el disco con Spotlight. Un candidato solo vale si coincide el tamaño
-    /// registrado (cuando se conoce). Se ignora todo lo que esté dentro del propio catálogo.
+    /// Volúmenes montados donde buscar (excluye el sistema y los ocultos).
+    static func mountedVolumes() -> [URL] {
+        (FileManager.default.mountedVolumeURLs(includingResourceValuesForKeys: [.volumeNameKey], options: [.skipHiddenVolumes]) ?? [])
+            .filter { !$0.path.hasPrefix("/System/") }
+    }
+
+    /// Busca los ficheros perdidos por nombre en una carpeta o volumen (recursivo) o, si
+    /// `folder` es `nil`, en los volúmenes indexados por Spotlight. Un candidato solo vale si
+    /// coincide el tamaño registrado (cuando se conoce). Se ignora el propio catálogo y los
+    /// perdidos ya resueltos con un huérfano.
     static func search(_ missing: [MissingFile], in folder: URL?, catalogRoot: URL) -> [MissingFile] {
         guard !missing.isEmpty else { return missing }
         var index: [String: [URL]] = [:]   // nombre en minúsculas -> rutas encontradas
@@ -125,12 +158,14 @@ enum CatalogVerifier {
             }
         }
         return missing.map { item in
+            guard item.candidate == nil else { return item }   // ya resuelto (p. ej. con un huérfano)
             var updated = item
             let candidates = index[item.filename.lowercased()] ?? []
             updated.candidate = candidates.first { candidate in
                 guard let size = item.size, size > 0 else { return true }
                 return ExportPlanner.fileSize(candidate) == size
             }
+            updated.candidateIsOrphan = false
             return updated
         }
     }
@@ -149,8 +184,9 @@ enum CatalogVerifier {
             .filter { ($0 as NSString).lastPathComponent.lowercased() == name }
     }
 
-    /// Copia cada candidato encontrado a la ruta que el catálogo espera, para que Capture One
-    /// vuelva a ver el fichero. Nunca sobrescribe.
+    /// Lleva cada candidato encontrado a la ruta que el catálogo espera, para que Capture One
+    /// vuelva a ver el fichero: los huérfanos del propio bundle se mueven, el resto se copia.
+    /// Nunca sobrescribe.
     /// - Returns: Mensaje de error por fichero; ausencia = restaurado.
     static func restore(_ missing: [MissingFile]) -> [String: String] {
         var errors: [String: String] = [:]
@@ -160,7 +196,11 @@ enum CatalogVerifier {
             do {
                 try FileManager.default.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
                 if FileManager.default.fileExists(atPath: target.path) { throw CocoaError(.fileWriteFileExists) }
-                try FileManager.default.copyItem(at: candidate, to: target)
+                if item.candidateIsOrphan {
+                    try FileManager.default.moveItem(at: candidate, to: target)
+                } else {
+                    try FileManager.default.copyItem(at: candidate, to: target)
+                }
                 if let size = item.size, size > 0, ExportPlanner.fileSize(target) != size {
                     try? FileManager.default.removeItem(at: target)
                     throw ExportError.sizeMismatch(expected: size, actual: ExportPlanner.fileSize(target))

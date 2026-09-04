@@ -268,6 +268,25 @@ struct FixtureCatalog {
     #expect(FileManager.default.fileExists(atPath: elsewhere.path))   // se copia, no se mueve
 }
 
+/// Un perdido cuyo fichero está como huérfano en otra carpeta de Originals se resuelve sin salir del bundle.
+@Test func matchesMissingFilesWithOrphans() throws {
+    let fixture = try FixtureCatalog()
+    defer { fixture.cleanup() }
+    let stray = fixture.bundle.appendingPathComponent("Originals/2026/01/02/2/MISSING.jpg")
+    try FixtureCatalog.writeJPEG(to: stray)
+    let reader = try CatalogReader(url: fixture.bundle)
+    let result = try CatalogVerifier.scan(catalog: reader)
+    #expect(result.orphans.map(\.relativePath) == ["Originals/2026/01/02/2/MISSING.jpg"])
+    let missing = try #require(result.missing.first)
+    #expect(missing.candidateIsOrphan)
+    #expect(missing.candidate?.resolvingSymlinksInPath().path == stray.resolvingSymlinksInPath().path)
+    #expect(CatalogVerifier.restore(result.missing).isEmpty)
+    #expect(!FileManager.default.fileExists(atPath: stray.path))                                  // movido, no copiado
+    #expect(FileManager.default.fileExists(atPath: fixture.bundle.appendingPathComponent("Originals/2026/01/01/1/MISSING.jpg").path))
+    let again = try CatalogVerifier.scan(catalog: reader)
+    #expect(again.orphans.isEmpty && again.missing.isEmpty)
+}
+
 @Test func listsImagesNotInAnyAlbum() throws {
     let fixture = try FixtureCatalog()
     defer { fixture.cleanup() }

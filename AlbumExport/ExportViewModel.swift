@@ -494,18 +494,32 @@ final class ExportViewModel {
         }
     }
 
-    /// Busca los ficheros ausentes en una carpeta (o en todo el disco con Spotlight).
-    func searchMissing(wholeDisk: Bool) {
-        guard let worker, let result = verifyResult, !result.missing.isEmpty else { return }
-        var folder: URL?
-        if !wholeDisk {
+    /// Volúmenes montados que se ofrecen para buscar ficheros perdidos.
+    var searchVolumes: [URL] { CatalogVerifier.mountedVolumes() }
+
+    /// Busca los ficheros ausentes en una carpeta o volumen elegido; con `nil` pide la carpeta.
+    func searchMissing(in chosen: URL?) {
+        guard verifyResult?.missing.isEmpty == false else { return }
+        var folder = chosen
+        if folder == nil {
             let panel = NSOpenPanel()
-            panel.title = String(localized: "Choose the folder to search for the missing files", comment: "Título del diálogo de búsqueda")
+            panel.title = String(localized: "Choose the folder or volume to search for the missing files", comment: "Título del diálogo de búsqueda")
             panel.canChooseFiles = false
             panel.canChooseDirectories = true
+            panel.directoryURL = URL(fileURLWithPath: "/Volumes")
             guard panel.runModal() == .OK, let url = panel.url else { return }
             folder = url
         }
+        runSearch(folder: folder)
+    }
+
+    /// Busca con Spotlight en todos los volúmenes indexados.
+    func searchMissingWithSpotlight() {
+        runSearch(folder: nil)
+    }
+
+    private func runSearch(folder: URL?) {
+        guard let worker, let result = verifyResult, !result.missing.isEmpty else { return }
         isVerifying = true
         Task {
             let updated = await worker.searchMissing(result.missing, in: folder)

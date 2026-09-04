@@ -52,19 +52,30 @@ struct VerifyView: View {
                             TableColumn("File") { Text(verbatim: $0.filename) }.width(180)
                             TableColumn("Expected location") { Text(verbatim: $0.expectedPath) }
                             TableColumn("Found at") { item in
-                                Text(verbatim: item.candidate?.path ?? "")
-                                    .foregroundStyle(item.candidate == nil ? Color.secondary : Color.green)
+                                if let candidate = item.candidate {
+                                    Text(verbatim: (item.candidateIsOrphan ? "⟲ " : "") + candidate.path)
+                                        .foregroundStyle(Color.green)
+                                        .help(item.candidateIsOrphan ? "Orphan inside the catalog: will be moved into place" : "Found outside the catalog: will be copied")
+                                } else {
+                                    Text("")
+                                }
                             }
                         }
                     }
                     HStack {
-                        Button("Search in folder…") { model.searchMissing(wholeDisk: false) }
-                            .disabled(result.missing.isEmpty)
-                        Button("Search whole disk (Spotlight)") { model.searchMissing(wholeDisk: true) }
-                            .disabled(result.missing.isEmpty)
+                        Menu("Search in…") {
+                            ForEach(model.searchVolumes, id: \.self) { volume in
+                                Button(volume.lastPathComponent) { model.searchMissing(in: volume) }
+                            }
+                            Divider()
+                            Button("Other folder…") { model.searchMissing(in: nil) }
+                            Button("Spotlight (indexed volumes)") { model.searchMissingWithSpotlight() }
+                        }
+                        .fixedSize()
+                        .disabled(result.missing.isEmpty)
                         Button("Restore found files into the catalog") { model.requestRestore() }
                             .disabled(result.foundCount == 0)
-                        Text("Matches by file name and size. Restoring copies each found file to the location the catalog expects.")
+                        Text("Orphans inside the catalog are matched first (name and size) and restoring moves them into place; files found elsewhere are copied.")
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 case .unfiled:
@@ -105,7 +116,7 @@ struct VerifyView: View {
             Button("Restore") { model.restoreMissing() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Each file is copied to the location the catalog expects. Existing files are never overwritten.")
+            Text("Orphans found inside the catalog are moved into place; files found elsewhere are copied. Existing files are never overwritten.")
         }
     }
 

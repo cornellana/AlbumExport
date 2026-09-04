@@ -545,6 +545,22 @@
         }
       }
     },
+    "Choose the folder or volume to search for the missing files": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tria la carpeta o el volum on cercar els fitxers perduts"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elige la carpeta o el volumen donde buscar los ficheros perdidos"
+          }
+        }
+      }
+    },
     "Choose the folder to search for the missing files": {
       "localizations": {
         "ca": {
@@ -1213,6 +1229,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Encontrado en"
+          }
+        }
+      }
+    },
+    "Found outside the catalog: will be copied": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trobat fora del catàleg: es copiarà"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encontrado fuera del catálogo: se copiará"
           }
         }
       }
@@ -1921,6 +1953,22 @@
         }
       }
     },
+    "Orphan inside the catalog: will be moved into place": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Orfe dins del catàleg: es mourà al seu lloc"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Huérfano dentro del catálogo: se moverá a su sitio"
+          }
+        }
+      }
+    },
     "Orphans are files inside Originals that the index does not know. Moving them keeps the folder structure so they can be imported again.": {
       "localizations": {
         "ca": {
@@ -1933,6 +1981,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Los huérfanos son ficheros dentro de Originals que el índice no conoce. Al moverlos se conserva la estructura de carpetas para poder importarlos de nuevo."
+          }
+        }
+      }
+    },
+    "Orphans found inside the catalog are moved into place; files found elsewhere are copied. Existing files are never overwritten.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Els orfes trobats dins del catàleg es mouen al seu lloc; el que es troba fora es copia. Mai se sobreescriuen fitxers existents."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los huérfanos encontrados dentro del catálogo se mueven a su sitio; lo encontrado fuera se copia. Nunca se sobrescriben ficheros existentes."
+          }
+        }
+      }
+    },
+    "Orphans inside the catalog are matched first (name and size) and restoring moves them into place; files found elsewhere are copied.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Primer es creuen amb els orfes del mateix catàleg (nom i mida), que en restaurar es mouen al seu lloc; el que es troba fora es copia."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Primero se cruzan con los huérfanos del propio catálogo (nombre y tamaño), que al restaurar se mueven a su sitio; lo encontrado fuera se copia."
           }
         }
       }
@@ -1965,6 +2045,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Huérfanos: %lld (%@)"
+          }
+        }
+      }
+    },
+    "Other folder…": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Una altra carpeta…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Otra carpeta…"
           }
         }
       }
@@ -2321,6 +2417,22 @@
         }
       }
     },
+    "Search in…": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerca a…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscar en…"
+          }
+        }
+      }
+    },
     "Search whole disk (Spotlight)": {
       "localizations": {
         "ca": {
@@ -2445,6 +2557,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Omitidas: %lld en la papelera, %lld no encontradas"
+          }
+        }
+      }
+    },
+    "Spotlight (indexed volumes)": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spotlight (volums indexats)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spotlight (volúmenes indexados)"
           }
         }
       }

@@ -98,7 +98,12 @@ El botón **Verify** compara la carpeta `Originals/` del bundle con el índice:
 - **Huérfanos**: ficheros en `Originals/` que ningún registro referencia (papelera incluida
   como referencia válida). Se listan con su ruta relativa y tamaño.
 - **Ausentes**: imágenes del índice cuyo fichero no existe donde el catálogo espera
-  (offline), tanto dentro del bundle como en rutas externas.
+  (offline), tanto dentro del bundle como en rutas externas. Primero se cruzan con los
+  huérfanos del propio bundle (nombre y tamaño): si coinciden, *Restore* los mueve a su
+  sitio sin sacarlos ni reimportar. Lo que no se resuelva así se puede buscar en cualquier
+  volumen montado (NAS, discos externos), en una carpeta concreta o con Spotlight; lo
+  encontrado fuera se copia a la ruta esperada.
+- **Sin álbum**: imágenes indexadas que no pertenecen a ningún álbum de usuario (informativo).
 
 *Move orphans to folder…* saca los huérfanos del bundle a la carpeta elegida conservando
 la estructura `Originals/AAAA/MM/DD/HHMM/`, para poder reimportarlos, y deja un CSV
