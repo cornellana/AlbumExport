@@ -1697,6 +1697,22 @@
         }
       }
     },
+    "Moving orphan files…": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Movent fitxers orfes…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moviendo ficheros huérfanos…"
+          }
+        }
+      }
+    },
     "Moving photos stored inside the catalog bundle leaves them offline in Capture One.": {
       "localizations": {
         "ca": {
@@ -2561,6 +2577,22 @@
         }
       }
     },
+    "Restoring found files…": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restaurant fitxers trobats…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restaurando ficheros encontrados…"
+          }
+        }
+      }
+    },
     "Run Export again to resume; finished photos are kept.": {
       "localizations": {
         "ca": {
@@ -2685,6 +2717,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Buscar en todo el disco (Spotlight)"
+          }
+        }
+      }
+    },
+    "Searching in %@: %lld files checked…": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cercant a %@: %lld fitxers revisats…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscando en %@: %lld ficheros revisados…"
+          }
+        }
+      }
+    },
+    "Searching in %@…": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cercant a %@…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Buscando en %@…"
           }
         }
       }

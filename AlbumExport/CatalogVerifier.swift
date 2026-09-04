@@ -164,14 +164,19 @@ enum CatalogVerifier {
     /// `folder` es `nil`, en los volúmenes indexados por Spotlight. Un candidato solo vale si
     /// coincide el tamaño registrado (cuando se conoce). Se ignora el propio catálogo y los
     /// perdidos ya resueltos con un huérfano.
-    static func search(_ missing: [MissingFile], in folder: URL?, catalogRoot: URL) -> [MissingFile] {
+    static func search(_ missing: [MissingFile], in folder: URL?, catalogRoot: URL,
+                       cancellation: CancellationToken? = nil, progress: (@Sendable (Int) -> Void)? = nil) -> [MissingFile] {
         guard !missing.isEmpty else { return missing }
         var index: [String: [URL]] = [:]   // nombre en minúsculas -> rutas encontradas
         let wanted = Set(missing.map { $0.filename.lowercased() })
         let rootPath = catalogRoot.standardizedFileURL.path + "/"
         if let folder {
             if let enumerator = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: [.isRegularFileKey], options: [.skipsHiddenFiles]) {
+                var scanned = 0
                 for case let url as URL in enumerator {
+                    if cancellation?.isCancelled == true { break }
+                    scanned += 1
+                    if scanned % 1000 == 0 { progress?(scanned) }
                     let name = url.lastPathComponent.lowercased()
                     guard wanted.contains(name), !url.standardizedFileURL.path.hasPrefix(rootPath) else { continue }
                     index[name, default: []].append(url)

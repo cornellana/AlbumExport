@@ -512,6 +512,7 @@ final class ExportViewModel {
     func moveOrphans() {
         guard let worker, let result = verifyResult, let folder = orphanTargetFolder else { return }
         isVerifying = true
+        verifyProgress = String(localized: "Moving orphan files…", comment: "Progreso de verificación")
         Task {
             let errors = await worker.moveOrphans(result.orphans, to: folder)
             let moved = result.orphans.count - errors.count
@@ -549,9 +550,18 @@ final class ExportViewModel {
 
     private func runSearch(folder: URL?) {
         guard let worker, let result = verifyResult, !result.missing.isEmpty else { return }
+        let token = CancellationToken()
+        verifyCancellation = token
         isVerifying = true
+        let where_ = folder?.path ?? "Spotlight"
+        verifyProgress = String(localized: "Searching in \(where_)…", comment: "Progreso de búsqueda de perdidos")
         Task {
-            let updated = await worker.searchMissing(result.missing, in: folder)
+            let updated = await worker.searchMissing(result.missing, in: folder, cancellation: token) { scanned in
+                Task { @MainActor in
+                    self.verifyProgress = String(localized: "Searching in \(where_): \(scanned) files checked…", comment: "Progreso de búsqueda de perdidos")
+                }
+            }
+            verifyCancellation = nil
             verifyResult?.missing = updated
             let found = updated.filter { $0.candidate != nil }.count
             verifyMessage = String(localized: "Found \(found) of \(updated.count) missing files", comment: "Resumen de búsqueda")
@@ -568,6 +578,7 @@ final class ExportViewModel {
     func restoreMissing() {
         guard let worker, let result = verifyResult else { return }
         isVerifying = true
+        verifyProgress = String(localized: "Restoring found files…", comment: "Progreso de verificación")
         Task {
             let errors = await worker.restoreMissing(result.missing)
             let restored = result.foundCount - errors.count
