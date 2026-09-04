@@ -59,6 +59,12 @@ o se cierra la app:
   (copia manual, o hecha con una versión anterior sin manifiesto) se adopta: se registra,
   recibe los metadatos y no se duplica con sufijo `_1`.
 
+## Última sesión
+
+Al arrancar, la app recupera el último catálogo, los patrones, los álbumes marcados (por
+ruta), el destino y las opciones. El modo *Move* no se restaura nunca: siempre arranca en
+*Copy*. Si el destino no está montado (NAS apagado) queda sin elegir.
+
 Para automatizar o probar: `AlbumExport <catálogo> <destino> "<patrones>" --run --quit`
 lanza la exportación al arrancar y cierra la app al terminar.
 

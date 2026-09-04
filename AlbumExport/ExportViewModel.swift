@@ -68,7 +68,49 @@ final class ExportViewModel {
             if arguments.count > 1 { destinationURL = URL(fileURLWithPath: arguments[arguments.startIndex + 1]) }
             if arguments.count > 2 { patternsText = arguments[arguments.startIndex + 2] }
             open(URL(fileURLWithPath: catalogPath))
+        } else {
+            restoreLastSession()
         }
+    }
+
+    // MARK: - Última sesión
+
+    private enum Keys {
+        static let catalog = "lastCatalogPath"
+        static let destination = "lastDestinationPath"
+        static let patterns = "lastPatterns"
+        static let selectedAlbums = "lastSelectedAlbumPaths"
+        static let options = "lastOptions"
+    }
+
+    /// Rutas de los álbumes marcados en la sesión anterior, pendientes de resolver al abrir el catálogo.
+    private var pendingSelectedAlbumPaths: [String]?
+
+    /// Al arrancar sin argumentos, se recupera lo último usado: catálogo, patrones, álbumes, destino y opciones.
+    private func restoreLastSession() {
+        let defaults = UserDefaults.standard
+        patternsText = defaults.string(forKey: Keys.patterns) ?? ""
+        if let data = defaults.data(forKey: Keys.options), let saved = try? JSONDecoder().decode(ExportOptions.self, from: data) {
+            options = saved
+            options.move = false   // mover nunca se restaura por defecto: es la acción peligrosa
+        }
+        if let path = defaults.string(forKey: Keys.destination), FileManager.default.fileExists(atPath: path) {
+            destinationURL = URL(fileURLWithPath: path)
+        }
+        pendingSelectedAlbumPaths = defaults.stringArray(forKey: Keys.selectedAlbums)
+        if let path = defaults.string(forKey: Keys.catalog), FileManager.default.fileExists(atPath: path) {
+            open(URL(fileURLWithPath: path))
+        }
+    }
+
+    /// Guarda la selección actual para la próxima vez.
+    private func saveSession() {
+        let defaults = UserDefaults.standard
+        defaults.set(catalogURL?.path, forKey: Keys.catalog)
+        defaults.set(destinationURL?.path, forKey: Keys.destination)
+        defaults.set(patternsText, forKey: Keys.patterns)
+        defaults.set(albums.filter { selectedAlbumIDs.contains($0.id) }.map(\.path), forKey: Keys.selectedAlbums)
+        defaults.set(try? JSONEncoder().encode(options), forKey: Keys.options)
     }
 
     var patterns: [String] { PatternMatcher.parse(patternsText) }
@@ -132,7 +174,12 @@ final class ExportViewModel {
                 self.albums = albums
                 self.catalogVersion = reader.version
                 self.catalogWarnings = reader.warnings
-                self.selectedAlbumIDs = []
+                if let paths = pendingSelectedAlbumPaths {
+                    self.selectedAlbumIDs = Set(albums.filter { paths.contains($0.path) }.map(\.id))
+                    pendingSelectedAlbumPaths = nil
+                } else {
+                    self.selectedAlbumIDs = []
+                }
                 self.summary = nil
                 self.logLines = []
                 refreshPlan()
@@ -155,6 +202,7 @@ final class ExportViewModel {
             return
         }
         destinationURL = url
+        saveSession()
     }
 
     func toggleAlbum(_ album: Album) {
@@ -171,6 +219,7 @@ final class ExportViewModel {
     /// Recalcula el plan en segundo plano; descarta resultados de peticiones anteriores.
     func refreshPlan() {
         guard let worker else { plan = nil; return }
+        saveSession()
         planGeneration += 1
         let generation = planGeneration
         let patterns = patterns

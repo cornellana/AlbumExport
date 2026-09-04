@@ -92,7 +92,7 @@ struct Photo: Identifiable, Hashable, Sendable {
 // MARK: - Exportación
 
 /// Opciones de la exportación elegidas por el usuario.
-struct ExportOptions: Hashable, Sendable {
+struct ExportOptions: Hashable, Codable, Sendable {
     var move = false
     var includeTrashed = false
     var includeAutoAlbums = false
