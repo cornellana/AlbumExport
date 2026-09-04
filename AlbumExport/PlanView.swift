@@ -3,7 +3,6 @@ import SwiftUI
 /// Panel de detalle guiado: acción, datos necesarios para esa acción, plan y progreso.
 struct PlanView: View {
     @Bindable var model: ExportViewModel
-
     var body: some View {
         VStack(spacing: 0) {
             ActionHeaderView(model: model)
@@ -43,7 +42,6 @@ struct PlanView: View {
 
 struct ActionHeaderView: View {
     @Bindable var model: ExportViewModel
-
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Picker("What do you want to do?", selection: $model.action) {
@@ -54,11 +52,12 @@ struct ActionHeaderView: View {
             .pickerStyle(.segmented)
             .labelsHidden()
             .disabled(model.isRunning)
+            // Sin fixedSize(vertical:): dentro de NavigationSplitView hace que toda la ventana
+            // se disponga a su altura ideal (contenido centrado y recortado). Se limita en líneas.
             Text(verbatim: model.action.explanation)
                 .font(.callout)
                 .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-
+                .lineLimit(3)
             Grid(alignment: .leading, horizontalSpacing: 12, verticalSpacing: 6) {
                 // 1. Catálogo de origen (todas las acciones)
                 GridRow {

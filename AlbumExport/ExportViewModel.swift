@@ -71,6 +71,7 @@ final class ExportViewModel {
         let all = CommandLine.arguments.dropFirst()
         autoRun = all.contains("--run")
         autoQuit = all.contains("--quit")
+        if all.contains("--dump-layout") { scheduleLayoutDump() }
         if let i = all.firstIndex(of: "--move-to"), all.indices.contains(i + 1) {
             destinationCatalogURL = URL(fileURLWithPath: all[i + 1])
             options.move = true
@@ -542,6 +543,35 @@ final class ExportViewModel {
             try CatalogVerifier.writeReport(result, catalogName: catalogURL?.lastPathComponent ?? "", to: url)
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    // MARK: - Diagnóstico de la disposición
+
+    /// Con `--dump-layout`: vuelca por stderr la geometría de ventana, pantalla y vistas de
+    /// desplazamiento tres segundos después de arrancar, y cierra la app.
+    private func scheduleLayoutDump() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+            var out = ""
+            if let screen = NSScreen.main { out += "screen \(screen.frame) visible \(screen.visibleFrame)\n" }
+            for window in NSApplication.shared.windows {
+                out += "window '\(window.title)' frame \(window.frame) contentRect \(window.contentLayoutRect) styleMask \(window.styleMask.rawValue)\n"
+                func walk(_ view: NSView, depth: Int) {
+                    let name = String(describing: type(of: view))
+                    var line = String(repeating: "  ", count: depth) + "\(name) frame=\(view.frame)"
+                    if let scroll = view as? NSScrollView {
+                        line += " visible=\(scroll.documentVisibleRect) docSize=\(scroll.documentView?.frame.size ?? .zero) insets=\(scroll.contentInsets)"
+                    }
+                    if let table = view as? NSTableView { line += " rows=\(table.numberOfRows)" }
+                    if depth < 14 && (name.contains("Scroll") || name.contains("Split") || name.contains("Hosting") || name.contains("Table") || name.contains("Outline") || depth < 4) {
+                        out += line + "\n"
+                    }
+                    for sub in view.subviews { walk(sub, depth: depth + 1) }
+                }
+                if let content = window.contentView { walk(content, depth: 0) }
+            }
+            FileHandle.standardError.write(Data(out.utf8))
+            NSApplication.shared.terminate(nil)
         }
     }
 

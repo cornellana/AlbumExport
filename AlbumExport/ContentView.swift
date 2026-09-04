@@ -65,50 +65,47 @@ struct AlbumSidebarView: View {
     @Bindable var model: ExportViewModel
 
     var body: some View {
-        // Una List de barra lateral gestiona sola el margen bajo la barra de herramientas y el
-        // desplazamiento; los campos de patrón y filtro van como primera sección fija en el listado.
-        let matched = model.matchedAlbumIDs
-        List {
+        VStack(alignment: .leading, spacing: 8) {
             if !model.action.needsAlbums {
-                Section {
-                    Label("Albums are not needed", systemImage: "checkmark.shield")
-                    Text("Verification checks the whole catalog.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                ContentUnavailableView(
+                    "Albums are not needed",
+                    systemImage: "checkmark.shield",
+                    description: Text("Verification checks the whole catalog."))
             } else {
-                Section("Album patterns") {
-                    TextField("Andorra 20??; Isla*", text: $model.patternsText, axis: .vertical)
-                        .lineLimit(1...3)
-                        .textFieldStyle(.roundedBorder)
-                    Text("Use * and ? as wildcards. Separate patterns with ;")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                Text("Album patterns")
+                    .font(.headline)
+                TextField("Andorra 20??; Isla*", text: $model.patternsText, axis: .vertical)
+                    .lineLimit(1...3)
+                    .textFieldStyle(.roundedBorder)
+                Text("Use * and ? as wildcards. Separate patterns with ;")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+
+                if model.worker == nil {
+                    ContentUnavailableView(
+                        "No catalog",
+                        systemImage: "books.vertical",
+                        description: Text("Open a Capture One catalog or session to list its albums."))
+                } else {
                     TextField("Filter albums", text: $model.albumFilter)
                         .textFieldStyle(.roundedBorder)
-                        .disabled(model.worker == nil)
-                }
-                if model.worker == nil {
-                    Section {
-                        Label("No catalog", systemImage: "books.vertical")
-                        Text("Open a Capture One catalog or session to list its albums.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+                        .padding(.top, 8)
+                    let matched = model.matchedAlbumIDs
+                    List(model.filteredAlbums) { album in
+                        AlbumRow(album: album,
+                                 isMatched: matched.contains(album.id),
+                                 isSelected: model.selectedAlbumIDs.contains(album.id))
+                            .contentShape(Rectangle())
+                            .onTapGesture { model.toggleAlbum(album) }
                     }
-                } else {
-                    Section("Albums: \(matched.union(model.selectedAlbumIDs).count) selected") {
-                        ForEach(model.filteredAlbums) { album in
-                            AlbumRow(album: album,
-                                     isMatched: matched.contains(album.id),
-                                     isSelected: model.selectedAlbumIDs.contains(album.id))
-                                .contentShape(Rectangle())
-                                .onTapGesture { model.toggleAlbum(album) }
-                        }
-                    }
+                    .listStyle(.inset)
+                    Text("Albums: \(matched.union(model.selectedAlbumIDs).count) selected")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
         }
-        .listStyle(.sidebar)
+        .padding()
     }
 }
 
