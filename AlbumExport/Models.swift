@@ -161,4 +161,8 @@ struct ExportSummary: Sendable {
     let successCount: Int
     let totalCount: Int
     let reportURL: URL?
+    /// Bytes realmente transferidos en esta ejecución (para medir la velocidad).
+    let bytesTransferred: Int64
+    /// Si se detuvo antes de terminar, el motivo. Lo hecho queda registrado y se retoma.
+    let interruption: ExportInterruption?
 }

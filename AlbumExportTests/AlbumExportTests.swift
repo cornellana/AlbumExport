@@ -216,7 +216,7 @@ struct FixtureCatalog {
     #expect(plan.missingSources == 1)
     #expect(plan.insideCatalogCount == 3)
 
-    let engine = ExportEngine(catalog: reader, destination: destination, options: options, writer: nil)
+    let engine = ExportEngine(catalog: reader, destination: destination, options: options, writer: nil, cancellation: CancellationToken())
     let result = try engine.run(plan: plan) { _ in }
     #expect(result.summary.successCount == 4)
     let folder = destination.appendingPathComponent("Andorra 20/Andorra 2025")
@@ -233,6 +233,47 @@ struct FixtureCatalog {
     #expect(try FileManager.default.contentsOfDirectory(atPath: folder.path).count == names.count)
 }
 
+/// Simula un corte: fichero truncado, manifiesto con metadatos pendientes, resto parcial y cancelación.
+@Test func resumesAfterInterruption() throws {
+    let fixture = try FixtureCatalog()
+    defer { fixture.cleanup() }
+    let reader = try CatalogReader(url: fixture.bundle)
+    let albums = try reader.albums()
+    let destination = fixture.root.appendingPathComponent("Export")
+    let options = ExportOptions(writeMetadata: false)
+    let plan = try ExportPlanner.plan(patterns: ["Viajes/Andorra 2025"], selectedAlbumIDs: [], albums: albums, catalog: reader, options: options)
+    let folder = destination.appendingPathComponent("Viajes Andorra 2025/Andorra 2025")
+    try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+
+    // Estado dejado por una ejecución cortada: IMG_0002 truncado, IMG_0001 sin metadatos, un parcial huérfano.
+    try Data([1, 2, 3]).write(to: folder.appendingPathComponent("IMG_0002.jpg"))
+    try FixtureCatalog.writeJPEG(to: folder.appendingPathComponent("IMG_0001.jpg"))
+    try Data([9]).write(to: folder.appendingPathComponent(Manifest.partialPrefix + "IMG_0001_1.jpg"))
+    var manifest = Manifest(folder: folder)
+    manifest.record(uuid: "U11", filename: "IMG_0002.jpg", metadataDone: false)
+    manifest.record(uuid: "U10", filename: "IMG_0001.jpg", metadataDone: false)
+    try manifest.save()
+
+    // Cancelación inmediata: nada cambia salvo la limpieza del parcial.
+    let cancelled = CancellationToken()
+    cancelled.cancel()
+    let stopped = try ExportEngine(catalog: reader, destination: destination, options: options, writer: nil, cancellation: cancelled).run(plan: plan) { _ in }
+    #expect(stopped.summary.interruption == .cancelled)
+    #expect(stopped.jobs.allSatisfy { $0.status == .pending || $0.status == .skippedTrashed || $0.status == .missingSource })
+
+    let result = try ExportEngine(catalog: reader, destination: destination, options: options, writer: nil, cancellation: CancellationToken()).run(plan: plan) { _ in }
+    #expect(result.summary.interruption == nil)
+    #expect(result.summary.successCount == 3)
+    let names = Set(try FileManager.default.contentsOfDirectory(atPath: folder.path))
+    #expect(names == ["IMG_0001.jpg", "IMG_0001_1.jpg", "IMG_0002.jpg", Manifest.filename])
+    // El truncado se volvió a copiar entero; el que tenía metadatos pendientes se reutilizó.
+    let source2 = fixture.bundle.appendingPathComponent("Originals/2026/01/01/1/IMG_0002.jpg")
+    #expect(ExportPlanner.fileSize(folder.appendingPathComponent("IMG_0002.jpg")) == ExportPlanner.fileSize(source2))
+    let allMetadataDone = Manifest(folder: folder).entries.values.allSatisfy { $0.metadataDone }
+    #expect(allMetadataDone)
+    #expect(result.jobs.first { $0.photo.uuid == "U10" }?.status == .doneWithoutMetadata)
+}
+
 @Test func writesAndVerifiesMetadataWithExiftool() throws {
     guard let exiftool = ExifToolLocator.find() else {
         Issue.record("exiftool no está instalado: prueba de metadatos omitida")
@@ -245,9 +286,10 @@ struct FixtureCatalog {
     let destination = fixture.root.appendingPathComponent("Export")
     let options = ExportOptions()
     let plan = try ExportPlanner.plan(patterns: ["Viajes/Andorra 2025"], selectedAlbumIDs: [], albums: albums, catalog: reader, options: options)
-    let engine = ExportEngine(catalog: reader, destination: destination, options: options, writer: ExifToolWriter(executable: exiftool))
+    let engine = ExportEngine(catalog: reader, destination: destination, options: options, writer: ExifToolWriter(executable: exiftool), cancellation: CancellationToken())
     let result = try engine.run(plan: plan) { _ in }
     #expect(result.jobs.filter { $0.status == .done }.count == 3)
+    #expect(result.summary.interruption == nil)
 
     let written = try #require(result.jobs.first { $0.photo.uuid == "U10" }?.destination)
     let read = try ExifToolWriter(executable: exiftool).readBack([written])[written.path]

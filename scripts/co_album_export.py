@@ -360,6 +360,9 @@ def unique_dest(folder: Path, filename: str, used: set[str]) -> Path:
 
 
 def load_manifest(folder: Path) -> dict:
+    # Restos de copias interrumpidas en una ejecución anterior.
+    for stale in folder.glob(".co_export-partial-*"):
+        stale.unlink(missing_ok=True)
     f = folder / ".co_export.json"
     if f.exists():
         try:
@@ -646,19 +649,31 @@ def main(argv=None) -> int:
             print(f"[{idx}/{len(planned)}] = {j.dest.relative_to(dest_root)} ({j.status})")
             continue
         j.dest = unique_dest(folder, j.photo.filename, used)
+        # Copia a nombre temporal y renombrado final: un corte (NAS, red) nunca deja un
+        # fichero truncado con el nombre definitivo. El manifiesto se guarda tras cada foto.
+        partial = j.dest.with_name(".co_export-partial-" + j.dest.name)
         try:
             if args.move:
-                shutil.move(str(j.photo.source), str(j.dest))
+                shutil.move(str(j.photo.source), str(partial))
             else:
-                shutil.copy2(j.photo.source, j.dest)
-            if not args.move and j.dest.stat().st_size != j.photo.source.stat().st_size:
+                shutil.copy2(j.photo.source, partial)
+            if not args.move and partial.stat().st_size != j.photo.source.stat().st_size:
                 raise OSError("tamaño distinto tras copiar")
+            partial.rename(j.dest)
             j.status = "copiado"
             manifest[j.photo.image_uuid] = j.dest.name
+            save_manifest(folder, manifest)
             print(f"[{idx}/{len(planned)}] + {j.dest.relative_to(dest_root)}")
         except OSError as e:
+            if args.move and partial.exists() and not j.photo.source.exists():
+                shutil.move(str(partial), str(j.photo.source))
+            else:
+                partial.unlink(missing_ok=True)
             j.status = f"error copia: {e}"
             print(f"[{idx}/{len(planned)}] ! {j.photo.filename}: {e}", file=sys.stderr)
+            if not dest_root.exists():
+                print("El destino ha dejado de ser accesible; se detiene. Vuelve a ejecutar para continuar.", file=sys.stderr)
+                break
         if args.adjustments_json and j.photo.variant_pk and j.status == "copiado":
             j.dest.with_name(j.dest.name + ".co-adjustments.json").write_text(
                 json.dumps(catalog.adjustments(j.photo.variant_pk), ensure_ascii=False, indent=1, default=str))

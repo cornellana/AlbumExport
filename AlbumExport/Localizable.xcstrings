@@ -17,6 +17,22 @@
         }
       }
     },
+    "%@/s": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@/s"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@/s"
+          }
+        }
+      }
+    },
     "%lld of %lld": {
       "localizations": {
         "ca": {
@@ -225,6 +241,38 @@
         }
       }
     },
+    "Cancel export": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel·la l'exportació"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancelar exportación"
+          }
+        }
+      }
+    },
+    "Cancelled by user": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel·lada per l'usuari"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancelada por el usuario"
+          }
+        }
+      }
+    },
     "Capture One %@, format %lld": {
       "localizations": {
         "ca": {
@@ -417,6 +465,22 @@
         }
       }
     },
+    "Destination is no longer reachable: %@": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La destinació ja no és accessible: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El destino ya no es accesible: %@"
+          }
+        }
+      }
+    },
     "Destination…": {
       "localizations": {
         "ca": {
@@ -513,6 +577,38 @@
         }
       }
     },
+    "Estimated time: about %@, based on the last measured speed": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temps estimat: uns %@, segons l'última velocitat mesurada"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tiempo estimado: unos %@, según la última velocidad medida"
+          }
+        }
+      }
+    },
+    "Estimated time: measured during the first seconds of the export": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Temps estimat: es mesura durant els primers segons de l'exportació"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tiempo estimado: se mide en los primeros segundos de la exportación"
+          }
+        }
+      }
+    },
     "Export": {
       "localizations": {
         "ca": {
@@ -525,6 +621,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Exportar"
+          }
+        }
+      }
+    },
+    "Export interrupted: %@": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exportació interrompuda: %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exportación interrumpida: %@"
           }
         }
       }
@@ -781,6 +893,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mover fotos guardadas dentro del bundle del catálogo las deja offline en Capture One."
+          }
+        }
+      }
+    },
+    "Network destination: each batch is prepared locally and uploaded once.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Destinació en xarxa: cada lot es prepara en local i es puja una sola vegada."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Destino en red: cada lote se prepara en local y se sube una sola vez."
           }
         }
       }
@@ -1121,6 +1249,22 @@
         }
       }
     },
+    "Run Export again to resume; finished photos are kept.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Torna a prémer Exporta per continuar; les fotos acabades es conserven."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vuelve a pulsar Exportar para continuar; las fotos terminadas se conservan."
+          }
+        }
+      }
+    },
     "SQLite error: %@": {
       "localizations": {
         "ca": {
@@ -1357,6 +1501,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Amarillo"
+          }
+        }
+      }
+    },
+    "about %@ remaining": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "falten uns %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "faltan unos %@"
           }
         }
       }

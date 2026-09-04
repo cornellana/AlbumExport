@@ -37,6 +37,32 @@ Salida:
 - *Move* mueve en vez de copiar y pide confirmación: las fotos que viven dentro del bundle
   del catálogo quedan offline en Capture One.
 
+## Cortes, cancelación y reanudación
+
+Pensado para exportar muchos gigabytes a un NAS sin perder lo hecho si se corta la red
+o se cierra la app:
+
+- Trabaja por **lotes de 40** fotos. Tras cada lote guarda el manifiesto `.albumexport.json`
+  de cada carpeta de álbum, con el fichero y si ya lleva metadatos.
+- Cada fichero se copia con un **nombre temporal** (`.albumexport-partial-…`) y se renombra
+  al terminar tras comprobar el tamaño. Un corte a medias nunca deja un fichero con nombre
+  definitivo; los restos parciales se borran al relanzar.
+- Si el destino es un **volumen de red** y se copia (no se mueve), cada lote se prepara en
+  disco local (copia + XMP) y se sube una sola vez. Así exiftool no reescribe RAW de decenas
+  de MB a través de la red.
+- Si el destino desaparece (NAS desconectado), la exportación se detiene con un aviso.
+  **Cancel export** detiene limpiamente al acabar el fichero en curso.
+- Al volver a pulsar **Export** con el mismo destino, las fotos completas se marcan
+  *Already exported*, las que quedaron sin metadatos los reciben, las truncadas se copian
+  de nuevo y solo se transfiere lo que falta.
+
+## Estimación de tiempo
+
+La barra de resumen muestra el tiempo estimado según la velocidad medida en la última
+ejecución (se guarda si transfirió más de 50 MB). Durante la exportación, el pie muestra
+bytes copiados, velocidad actual y tiempo restante, calculados sobre los bytes realmente
+transferidos en esa ejecución.
+
 ## Seguridad
 
 - El catálogo original **nunca se abre ni se modifica**: la base de datos SQLite se copia

@@ -78,38 +78,71 @@ enum ExportPlanner {
 
 // MARK: - Manifiesto
 
-/// Registro por carpeta de álbum (UUID de imagen -> nombre de fichero) para no duplicar
-/// fotos en ejecuciones repetidas.
+/// Registro por carpeta de álbum (UUID de imagen -> fichero y estado) para no duplicar
+/// fotos en ejecuciones repetidas y retomar exportaciones interrumpidas.
 struct Manifest {
     static let filename = ".albumexport.json"
-    private(set) var entries: [String: String]
+    /// Prefijo de los ficheros en curso de copia; se renombran al terminar.
+    static let partialPrefix = ".albumexport-partial-"
+
+    struct Entry: Codable, Equatable {
+        var file: String
+        var metadataDone: Bool
+    }
+
+    private(set) var entries: [String: Entry]
     let folder: URL
 
     init(folder: URL) {
         self.folder = folder
         let url = folder.appendingPathComponent(Self.filename)
-        if let data = try? Data(contentsOf: url),
-           let decoded = try? JSONDecoder().decode([String: String].self, from: data) {
-            entries = decoded
+        if let data = try? Data(contentsOf: url) {
+            if let decoded = try? JSONDecoder().decode([String: Entry].self, from: data) {
+                entries = decoded
+            } else if let legacy = try? JSONDecoder().decode([String: String].self, from: data) {
+                // Formato de la primera versión (solo nombre): se asume completado.
+                entries = legacy.mapValues { Entry(file: $0, metadataDone: true) }
+            } else {
+                entries = [:]
+            }
         } else {
             entries = [:]
         }
     }
 
-    /// Fichero ya exportado para esa imagen, si sigue existiendo en la carpeta.
-    func existingFile(for uuid: String) -> URL? {
-        guard let name = entries[uuid] else { return nil }
-        let url = folder.appendingPathComponent(name)
-        return FileManager.default.fileExists(atPath: url.path) ? url : nil
+    /// Fichero ya exportado para esa imagen, si existe y tiene el tamaño esperado.
+    /// Un fichero truncado por un corte se elimina para copiarlo de nuevo.
+    func existingFile(for uuid: String, expectedSize: Int64) -> (url: URL, metadataDone: Bool)? {
+        guard let entry = entries[uuid] else { return nil }
+        let url = folder.appendingPathComponent(entry.file)
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        // Tras escribir XMP el tamaño cambia unos KB; solo se desconfía si aún no se escribieron metadatos.
+        if !entry.metadataDone, ExportPlanner.fileSize(url) != expectedSize {
+            try? FileManager.default.removeItem(at: url)
+            return nil
+        }
+        return (url, entry.metadataDone)
     }
 
-    mutating func record(uuid: String, filename: String) {
-        entries[uuid] = filename
+    mutating func record(uuid: String, filename: String, metadataDone: Bool) {
+        entries[uuid] = Entry(file: filename, metadataDone: metadataDone)
+    }
+
+    mutating func markMetadataDone(uuid: String) {
+        entries[uuid]?.metadataDone = true
     }
 
     func save() throws {
         let data = try JSONEncoder().encode(entries)
         try data.write(to: folder.appendingPathComponent(Self.filename), options: .atomic)
+    }
+
+    /// Borra restos de copias interrumpidas en la carpeta.
+    static func removePartialFiles(in folder: URL) {
+        let names = (try? FileManager.default.contentsOfDirectory(atPath: folder.path)) ?? []
+        for name in names where name.hasPrefix(partialPrefix) {
+            try? FileManager.default.removeItem(at: folder.appendingPathComponent(name))
+        }
     }
 }
 

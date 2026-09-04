@@ -14,7 +14,9 @@ struct PlanView: View {
                 .padding(.vertical, 8)
             Divider()
             if let plan = model.plan, !plan.jobs.isEmpty {
-                SummaryBarView(plan: plan, move: model.options.move, isPlanning: model.isPlanning)
+                SummaryBarView(plan: plan, move: model.options.move, isPlanning: model.isPlanning,
+                               estimate: model.isRunning ? nil : model.estimatedRemainingSeconds,
+                               isNetwork: model.destinationIsNetwork)
                     .padding(.horizontal)
                     .padding(.vertical, 8)
                 JobsTableView(jobs: plan.jobs)
@@ -108,30 +110,51 @@ struct SummaryBarView: View {
     let plan: ExportPlan
     let move: Bool
     let isPlanning: Bool
+    let estimate: TimeInterval?
+    let isNetwork: Bool
 
     var body: some View {
-        HStack(spacing: 16) {
-            let size = plan.totalBytes.formatted(.byteCount(style: .file))
-            if move {
-                Text("\(plan.plannedCount) photos to move, \(size)").fontWeight(.semibold)
-            } else {
-                Text("\(plan.plannedCount) photos to copy, \(size)").fontWeight(.semibold)
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 16) {
+                let size = plan.totalBytes.formatted(.byteCount(style: .file))
+                if move {
+                    Text("\(plan.plannedCount) photos to move, \(size)").fontWeight(.semibold)
+                } else {
+                    Text("\(plan.plannedCount) photos to copy, \(size)").fontWeight(.semibold)
+                }
+                Text("Inside catalog bundle: \(plan.insideCatalogCount)")
+                Text("Skipped: \(plan.skippedTrashed) in trash, \(plan.missingSources) not found")
+                Spacer()
+                if isPlanning {
+                    ProgressView().controlSize(.small)
+                    Text("Planning…").foregroundStyle(.secondary)
+                }
             }
-            Text("Inside catalog bundle: \(plan.insideCatalogCount)")
-            Text("Skipped: \(plan.skippedTrashed) in trash, \(plan.missingSources) not found")
-            if move && plan.insideCatalogCount > 0 {
-                Label("Moving photos stored inside the catalog bundle leaves them offline in Capture One.",
-                      systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(.orange)
-            }
-            Spacer()
-            if isPlanning {
-                ProgressView().controlSize(.small)
-                Text("Planning…").foregroundStyle(.secondary)
+            HStack(spacing: 16) {
+                if let estimate {
+                    Label("Estimated time: about \(formatDuration(estimate)), based on the last measured speed", systemImage: "clock")
+                } else if plan.plannedCount > 0 {
+                    Label("Estimated time: measured during the first seconds of the export", systemImage: "clock")
+                        .foregroundStyle(.secondary)
+                }
+                if isNetwork && !move {
+                    Label("Network destination: each batch is prepared locally and uploaded once.", systemImage: "network")
+                        .foregroundStyle(.secondary)
+                }
+                if move && plan.insideCatalogCount > 0 {
+                    Label("Moving photos stored inside the catalog bundle leaves them offline in Capture One.",
+                          systemImage: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.orange)
+                }
             }
         }
         .font(.callout)
     }
+}
+
+/// "2 h 15 min", "45 s"… en el idioma del usuario.
+func formatDuration(_ seconds: TimeInterval) -> String {
+    Duration.seconds(max(seconds, 0)).formatted(.units(allowed: [.hours, .minutes, .seconds], width: .abbreviated, maximumUnitCount: 2))
 }
 
 // MARK: - Tabla
@@ -217,18 +240,38 @@ struct FooterView: View {
         VStack(alignment: .leading, spacing: 6) {
             if model.isRunning {
                 ProgressView(value: Double(model.progressCompleted), total: Double(max(model.progressTotal, 1)))
-                HStack {
+                HStack(spacing: 12) {
                     Text("\(model.progressCompleted) of \(model.progressTotal)")
                         .monospacedDigit()
+                    Text(verbatim: model.bytesDone.formatted(.byteCount(style: .file)))
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                    if let throughput = model.throughput {
+                        Text("\(Int64(throughput).formatted(.byteCount(style: .file)))/s")
+                            .monospacedDigit()
+                    }
+                    if let remaining = model.estimatedRemainingSeconds {
+                        Text("about \(formatDuration(remaining)) remaining")
+                            .monospacedDigit()
+                    }
                     Text(verbatim: model.currentFile)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
+                    Spacer()
+                    Button("Cancel export") { model.cancelExport() }
                 }
                 .font(.callout)
             } else if let summary = model.summary {
                 HStack {
-                    Label("Exported \(summary.successCount) of \(summary.totalCount) photos", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(summary.successCount == summary.totalCount ? Color.green : Color.orange)
+                    if let interruption = summary.interruption {
+                        Label("Export interrupted: \(interruption.message)", systemImage: "pause.circle.fill")
+                            .foregroundStyle(.orange)
+                        Text("Run Export again to resume; finished photos are kept.")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Label("Exported \(summary.successCount) of \(summary.totalCount) photos", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(summary.successCount == summary.totalCount ? Color.green : Color.orange)
+                    }
                     Button("Show Report") { model.revealReport() }
                     Button("Show in Finder") { model.revealDestination() }
                 }
