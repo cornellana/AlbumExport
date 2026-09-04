@@ -536,3 +536,19 @@ struct FixtureCatalog {
     let dup = try #require(try reader.missingFiles().first { $0.imageID == 18 })
     #expect(dup.alsoIndexedAt?.hasSuffix("Originals/2026/01/01/1/IMG_0001.jpg") == true)
 }
+
+/// La búsqueda de perdidos entra en subcarpetas y también dentro de otros catálogos de Capture One.
+@Test func searchesInsideSubfoldersAndOtherCatalogs() throws {
+    let fixture = try FixtureCatalog()
+    defer { fixture.cleanup() }
+    let reader = try CatalogReader(url: fixture.bundle)
+    let missing = try reader.missingFiles()
+    let other = fixture.root.appendingPathComponent("Disco/Backup/Otro.cocatalog/Originals/2024/05/05/7/MISSING.jpg")
+    try FileManager.default.createDirectory(at: other.deletingLastPathComponent(), withIntermediateDirectories: true)
+    try FixtureCatalog.writeJPEG(to: other)
+    let found = CatalogVerifier.search(missing, in: fixture.root.appendingPathComponent("Disco"), catalogRoot: fixture.bundle)
+    #expect(found.first?.candidate?.resolvingSymlinksInPath().path == other.resolvingSymlinksInPath().path)
+    #expect(found.first?.candidateIsOrphan == false)
+    #expect(CatalogVerifier.restore(found).isEmpty)
+    #expect(FileManager.default.fileExists(atPath: other.path))   // copiado: el otro catálogo queda intacto
+}
