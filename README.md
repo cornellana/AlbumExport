@@ -119,8 +119,9 @@ El botón **Verify** compara la carpeta `Originals/` del bundle con el índice:
   varias opciones valen, gana el álbum de intervalo de captura más corto (la sesión, no una
   recopilación). *Create "Sin clasificar" group…* crea en Capture One, tras confirmar, el grupo
   **Sin clasificar** con un subálbum por cada álbum probable y **Sin álbum probable** para el
-  resto. No mueve ni borra nada, se puede repetir sin duplicar, y esos subálbumes no cuentan
-  como álbum: la foto sigue en la lista hasta que se arrastre a un álbum de verdad.
+  resto. No mueve ni borra nada y se puede repetir sin duplicar. Esos subálbumes cuentan como
+  álbum (la foto deja de figurar como "sin álbum"); pasarlas al álbum definitivo o borrarlas
+  es un proceso aparte. No se usan como referencia para proponer álbum a otras fotos.
 
 *Move orphans to folder…* saca los huérfanos del bundle a la carpeta elegida conservando
 la estructura `Originals/AAAA/MM/DD/HHMM/`, para poder reimportarlos, y deja un CSV

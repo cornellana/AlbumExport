@@ -639,6 +639,10 @@ final class ExportViewModel {
             do {
                 let done = try await worker.createUnfiledAlbums(group: Self.unfiledAlbumName, fallbackAlbum: Self.unfiledFallbackAlbumName, images: result.unfiled)
                 verifyMessage = String(localized: "Group \"\(Self.unfiledAlbumName)\": \(done.added) photos added to \(done.albums) albums.", comment: "Resumen tras crear el grupo de sin clasificar")
+                if done.failed > 0 {
+                    errorMessage = String(localized: "Capture One did not add \(done.failed) photos. Press the button again to retry.", comment: "Aviso tras crear el grupo de sin clasificar")
+                }
+                if let refreshed = try? await worker.verify() { verifyResult = refreshed }
             } catch {
                 errorMessage = error.localizedDescription
             }

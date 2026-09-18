@@ -417,6 +417,22 @@
         }
       }
     },
+    "Capture One did not add %lld photos. Press the button again to retry.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture One no ha afegit %lld fotos. Prem el botó una altra vegada per reintentar."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture One no ha añadido %lld fotos. Pulsa el botón otra vez para reintentar."
+          }
+        }
+      }
+    },
     "Capture One did not open the catalog %@.": {
       "localizations": {
         "ca": {

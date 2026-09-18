@@ -267,6 +267,12 @@ struct CaptureOneDriver {
         return out.split(separator: "\n").map(String.init)
     }
 
+    /// Variantes que contiene ahora mismo el álbum, según Capture One.
+    func variantCount(document: String, path: [String]) throws -> Int {
+        let out = try tell("tell document \(AppleScriptRunner.quote(document))\nreturn count of variants of \(Self.collectionReference(path: path))\nend tell")
+        return Int(out.trimmingCharacters(in: .whitespacesAndNewlines)) ?? 0
+    }
+
     func addToAlbum(document: String, path: [String], variantIDs: [Int]) throws {
         guard !variantIDs.isEmpty else { return }
         _ = try tell("""

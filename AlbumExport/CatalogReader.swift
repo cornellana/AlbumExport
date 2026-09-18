@@ -188,7 +188,9 @@ final class CatalogReader: @unchecked Sendable {
         return nodes.compactMap { pk, node -> Album? in
             guard node.ent == albumEnt || node.ent == smartEnt else { return nil }
             let parent = node.parent.flatMap { nodes[$0] }
-            let isAuto = parent.map { $0.ent == folderEnt && Self.autoFolderNames.contains($0.name) } ?? false
+            // Los subálbumes de "Sin clasificar" repiten el nombre del álbum real: se tratan como
+            // automáticos para que un patrón como "Barcelona*" no arrastre también los descartes.
+            let isAuto = parent.map { ($0.ent == folderEnt && Self.autoFolderNames.contains($0.name)) || Self.unfiledGroupNames.contains($0.name) } ?? false
             return Album(id: pk, name: node.name, path: path(of: pk), isAuto: isAuto, isSmart: node.ent == smartEnt, imageCount: node.count)
         }
         .sorted { $0.path.localizedCaseInsensitiveCompare($1.path) == .orderedAscending }
@@ -371,12 +373,12 @@ final class CatalogReader: @unchecked Sendable {
     }
 
     /// Nombres (en los idiomas de la app) del grupo que esta app crea con las fotos sin clasificar.
-    /// Sus subálbumes son una zona de paso: ni cuentan como álbum ni sirven para proponer álbum.
+    /// Sus subálbumes cuentan como álbum, pero no sirven de referencia para proponer álbum.
     static let unfiledGroupNames: Set<String> = ["Unfiled", "Sin clasificar", "Sense classificar"]
 
     /// Imágenes del índice que no están en ningún álbum creado por el usuario (ni en la
-    /// papelera). Los álbumes automáticos de "Recent Imports" / "Recent Captures" y los del grupo
-    /// "Sin clasificar" no cuentan. Cada resultado indica si otra foto con el mismo nombre ya
+    /// papelera). Los álbumes automáticos de "Recent Imports" / "Recent Captures" no cuentan; los del
+    /// grupo "Sin clasificar" sí. Cada resultado indica si otra foto con el mismo nombre ya
     /// está en algún álbum y, si no, a qué álbum pertenece probablemente (ver `AlbumSuggester`).
     func imagesNotInAnyAlbum() throws -> [UnfiledImage] {
         guard let albumEnt = entities["AlbumCollection"] else { return [] }
@@ -385,12 +387,14 @@ final class CatalogReader: @unchecked Sendable {
         let autoNames = Self.autoFolderNames.map { "'\($0)'" }.joined(separator: ", ")
         let unfiledNames = Self.unfiledGroupNames.map { "'\($0)'" }.joined(separator: ", ")
         let userAlbumMembership = """
-            SELECT ic.ZIMAGE AS image, c.Z_PK AS albumID, c.ZNAME AS album FROM ZIMAGEINCOLLECTION ic
+            SELECT ic.ZIMAGE AS image, c.Z_PK AS albumID, c.ZNAME AS album, IFNULL(p.ZNAME, '') AS parentName FROM ZIMAGEINCOLLECTION ic
             JOIN ZCOLLECTION c ON c.Z_PK = ic.ZCOLLECTION
             LEFT JOIN ZCOLLECTION p ON p.Z_PK = c.ZPARENT
             WHERE c.Z_ENT = \(albumEnt) AND NOT (IFNULL(p.Z_ENT, -1) = \(folderEnt) AND IFNULL(p.ZNAME, '') IN (\(autoNames)))
-              AND IFNULL(p.ZNAME, '') NOT IN (\(unfiledNames))
             """
+        // Los subálbumes de "Sin clasificar" cuentan como álbum (la foto ya está recogida), pero
+        // no sirven de referencia: ni para marcar duplicados ni para proponer álbum.
+        let referenceMembership = "SELECT * FROM (\(userAlbumMembership)) WHERE parentName NOT IN (\(unfiledNames))"
         let rows = try db.query("""
             SELECT i.Z_PK AS pk FROM ZIMAGE i
             WHERE NOT EXISTS (SELECT 1 FROM (\(userAlbumMembership)) m WHERE m.image = i.Z_PK) \(trashed)
@@ -402,7 +406,7 @@ final class CatalogReader: @unchecked Sendable {
         var filedNames: [String: String] = [:]
         var albumNames: [Int: String] = [:]
         var albumsByImage: [Int: Set<Int>] = [:]
-        for row in try db.query("SELECT m.image AS image, m.albumID AS albumID, m.album AS album FROM (\(userAlbumMembership)) m ORDER BY m.album") {
+        for row in try db.query("SELECT m.image AS image, m.albumID AS albumID, m.album AS album FROM (\(referenceMembership)) m ORDER BY m.album") {
             guard let image = row.int("image"), let albumID = row.int("albumID"), let album = row.string("album"),
                   let loc = locationByID[image] else { continue }
             albumNames[albumID] = album

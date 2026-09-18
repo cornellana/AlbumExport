@@ -63,7 +63,7 @@ struct Album: Identifiable, Hashable, Sendable {
     let name: String
     /// Ruta completa "Grupo/Álbum" para álbumes anidados en grupos.
     let path: String
-    /// Álbum automático de "Recent Imports" / "Recent Captures".
+    /// Álbum automático: de "Recent Imports" / "Recent Captures", o subálbum del grupo "Sin clasificar".
     let isAuto: Bool
     /// Smart album: su contenido no está materializado en la base de datos.
     let isSmart: Bool

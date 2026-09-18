@@ -624,9 +624,9 @@ struct FixtureCatalog {
     #expect(AlbumSuggester.sequence(of: "LONE.jpg") == nil)
 }
 
-/// El lector propone álbum con los datos del índice y no cuenta como álbum los subálbumes del
-/// grupo "Sin clasificar" que crea esta app.
-@Test func readerSuggestsAlbumsAndIgnoresUnfiledGroup() throws {
+/// El lector propone álbum con los datos del índice. Los subálbumes del grupo "Sin clasificar"
+/// cuentan como álbum, pero no sirven de referencia para proponer álbum a otras fotos.
+@Test func readerSuggestsAlbumsAndUnfiledGroupCountsAsAlbum() throws {
     let fixture = try FixtureCatalog()
     defer { fixture.cleanup() }
     let db = try SQLiteDatabase(path: fixture.bundle.appendingPathComponent("Fixture.cocatalogdb").path)
@@ -635,11 +635,19 @@ struct FixtureCatalog {
         UPDATE ZIMAGE SET ZEXP_DATE = 1700000000 WHERE Z_PK = 10;
         UPDATE ZIMAGE SET ZEXP_DATE = 1700000600 WHERE Z_PK = 16;
         UPDATE ZIMAGE SET ZEXP_DATE = 1700001200 WHERE Z_PK = 11;
-        INSERT INTO ZCOLLECTION VALUES (7,20,'Sin clasificar',1),(2,21,'Andorra 2025',20);
-        INSERT INTO ZIMAGEINCOLLECTION (ZCOLLECTION, ZIMAGE) VALUES (21,16);
         """)
-    let unfiled = try CatalogReader(url: fixture.bundle).imagesNotInAnyAlbum()
-    let lone = try #require(unfiled.first { $0.imageID == 16 })   // sigue sin clasificar aunque esté en el subálbum
-    #expect(lone.suggestion == AlbumSuggestion(album: "Andorra 2025", confidence: .between))
-    #expect(unfiled.first { $0.imageID == 17 }?.suggestion == nil)   // duplicado por nombre: no se propone
+    let before = try CatalogReader(url: fixture.bundle).imagesNotInAnyAlbum()
+    #expect(before.first { $0.imageID == 16 }?.suggestion == AlbumSuggestion(album: "Andorra 2025", confidence: .between))
+    #expect(before.first { $0.imageID == 17 }?.suggestion == nil)   // duplicado por nombre: no se propone
+
+    // Tras crear el grupo: LONE.jpg queda recogida; una foto nueva junto a ella no hereda "Otros".
+    try db.execute("""
+        INSERT INTO ZCOLLECTION VALUES (7,20,'Sin clasificar',1),(2,21,'Otros',20);
+        INSERT INTO ZIMAGEINCOLLECTION (ZCOLLECTION, ZIMAGE) VALUES (21,16);
+        INSERT INTO ZIMAGE VALUES (19,'U19','NEW_0001.jpg',0,1,2,1800000000);
+        UPDATE ZIMAGE SET ZEXP_DATE = 1800000060 WHERE Z_PK = 16;
+        """)
+    let after = try CatalogReader(url: fixture.bundle).imagesNotInAnyAlbum()
+    #expect(!after.contains { $0.imageID == 16 })
+    #expect(try #require(after.first { $0.imageID == 19 }).suggestion == nil)
 }
