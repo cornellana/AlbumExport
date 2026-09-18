@@ -96,7 +96,14 @@ o se cierra la app:
 El botón **Verify** compara la carpeta `Originals/` del bundle con el índice:
 
 - **Huérfanos**: ficheros en `Originals/` que ningún registro referencia (papelera incluida
-  como referencia válida). Se listan con su ruta relativa y tamaño.
+  como referencia válida). Se listan con su ruta relativa y tamaño, y se clasifican leyendo su
+  hora de captura EXIF: **copia sobrante** de una foto que el catálogo ya tiene (mismo nombre y
+  misma hora de captura; se indica en qué álbum está) o **foto que no está en el catálogo**, con
+  su álbum probable por la misma regla que en "Sin álbum". *Import the N photos not in the
+  catalog…* importa en Capture One, tras confirmar, solo estas últimas (una vez cada una) y las
+  reparte en el grupo **Huérfanos recuperados**, con un subálbum por álbum probable. Los
+  ficheros huérfanos no se tocan: se importa un clon desde una carpeta temporal y, después, el
+  huérfano pasa a ser una copia sobrante más.
 - **Ausentes**: imágenes del índice cuyo fichero no existe donde el catálogo espera
   (offline), tanto dentro del bundle como en rutas externas. Primero se cruzan con los
   huérfanos del propio bundle (nombre y tamaño): si coinciden, *Restore* los mueve a su
@@ -134,6 +141,9 @@ referenciado. *Save report…* guarda el CSV sin mover nada.
 Al arrancar, la app recupera el último catálogo, los patrones, los álbumes marcados (por
 ruta), el destino y las opciones. El modo *Move* no se restaura nunca: siempre arranca en
 *Copy*. Si el destino no está montado (NAS apagado) queda sin elegir.
+
+Para probar la importación de huérfanos con un catálogo desechable: `AlbumExport <catálogo> --verify
+--recover-orphans --quit`.
 
 Para automatizar o probar: `AlbumExport <catálogo> <destino> "<patrones>" --run --quit`
 lanza la exportación al arrancar y cierra la app al terminar.

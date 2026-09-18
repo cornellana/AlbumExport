@@ -519,6 +519,7 @@ struct FixtureCatalog {
     let reader = try CatalogReader(url: url)
     let result = try CatalogVerifier.scan(catalog: reader)
     print("VERIFY-REAL files=\(result.filesOnDisk) referenced=\(result.referenced) orphans=\(result.orphans.count) missing=\(result.missing.count) unfiled=\(result.unfiled.count) matched=\(result.foundCount) seconds=\(Int(Date().timeIntervalSince(start)))")
+    print("VERIFY-REAL orphanCopies=\(result.orphanCopies) recoverable=\(result.recoverableOrphans.count) withAlbum=\(result.recoverableOrphans.filter { $0.suggestion != nil }.count) notPhoto=\(result.orphans.filter { !$0.isImportable }.count)")
     print("VERIFY-REAL toFile=\(result.unfiledToFile.count) suggested=\(result.unfiledWithSuggestion) albums=\(result.suggestedAlbumCount) nearby=\(result.unfiledToFile.filter { $0.suggestion?.confidence == .nearby }.count)")
     for o in result.orphans.prefix(5) { print("VERIFY-REAL orphan \(o.relativePath) \(o.size)") }
     for m in result.missing.prefix(5) { print("VERIFY-REAL missing \(m.expectedPath) -> \(m.candidate?.path ?? "-")") }
@@ -658,4 +659,33 @@ struct FixtureCatalog {
     let after = try CatalogReader(url: fixture.bundle).imagesNotInAnyAlbum()
     #expect(!after.contains { $0.imageID == 16 })
     #expect(try #require(after.first { $0.imageID == 19 }).suggestion == nil)
+}
+
+/// Huérfanos: el que tiene nombre y tamaño de una foto indexada es una copia sobrante; el que no
+/// está en el índice es recuperable (una sola vez si hay varias copias) y recibe álbum probable.
+@Test func classifiesOrphansAsCopiesOrRecoverable() throws {
+    let fixture = try FixtureCatalog()
+    defer { fixture.cleanup() }
+    let db = try SQLiteDatabase(path: fixture.bundle.appendingPathComponent("Fixture.cocatalogdb").path)
+    try db.execute("""
+        ALTER TABLE ZIMAGE ADD COLUMN ZEXP_DATE FLOAT;
+        UPDATE ZIMAGE SET ZEXP_DATE = 1700000000 WHERE Z_PK = 10;
+        UPDATE ZIMAGE SET ZEXP_DATE = 1700001200 WHERE Z_PK = 11;
+        """)
+    func orphan(_ path: String, date: Double?) -> OrphanFile {
+        OrphanFile(relativePath: path, url: URL(fileURLWithPath: "/nonexistent/" + path), size: 1,
+                   captureDate: date.map { Date(timeIntervalSince1970: $0) })
+    }
+    let classified = try CatalogReader(url: fixture.bundle).classify([
+        orphan("Originals/x/IMG_0001.jpg", date: 1700000000),   // misma foto que la 10, que está en Andorra 2025
+        orphan("Originals/x/IMG_0003.jpg", date: 1700000600),   // no está en el índice; entre la 10 y la 11
+        orphan("Originals/y/IMG_0003.jpg", date: 1700000600),   // otra copia huérfana de la misma
+        orphan("Originals/x/IMG_0001.JPG", date: 1900000000),   // mismo nombre, otra foto (contador repetido)
+        orphan("Originals/x/cache.db", date: nil),
+    ])
+    #expect(classified[0].copyOfIndexed && classified[0].indexedAlbum == "Andorra 2025" && !classified[0].isRecoverable)
+    #expect(classified[1].isRecoverable && classified[1].suggestion == AlbumSuggestion(album: "Andorra 2025", confidence: .between))
+    #expect(classified[2].repeatedOrphan && !classified[2].isRecoverable)
+    #expect(classified[3].isRecoverable && classified[3].suggestion == nil)
+    #expect(!classified[4].isImportable && !classified[4].isRecoverable)
 }

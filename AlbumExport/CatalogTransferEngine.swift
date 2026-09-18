@@ -144,7 +144,7 @@ struct CatalogTransferEngine {
                                  current: String(localized: "Importing \(batch.count) photos into \(destination)…", comment: "Fase de traslado")))
                 let before = try driver.imageIDs(document: destination)
                 try driver.importFolder(document: destination, folder: folder)
-                let after = try waitForImport(document: destination, before: before.count, expected: expected.count)
+                let after = try driver.waitForImport(document: destination, before: before.count, expected: expected.count)
                 let newIDs = Array(after.subtracting(before)).sorted()
                 let details = try driver.imageDetails(document: destination, imageIDs: newIDs)
 
@@ -217,22 +217,6 @@ struct CatalogTransferEngine {
         }
         let missing = names.filter { !FileManager.default.fileExists(atPath: folder.appendingPathComponent($0).path) }
         throw CaptureOneError.timeout(String(localized: "export of \(missing.count) files (e.g. \(missing.first ?? ""))", comment: "Detalle de espera agotada"))
-    }
-
-    private func waitForImport(document: String, before: Int, expected: Int, timeout: TimeInterval = 1800) throws -> Set<Int> {
-        let deadline = Date().addingTimeInterval(timeout)
-        var lastCount = -1
-        var stableRounds = 0
-        while Date() < deadline {
-            let count = try driver.imageCount(document: document)
-            if count >= before + expected { return try driver.imageIDs(document: document) }
-            // Si el recuento deja de crecer (duplicados descartados), aceptar lo que haya.
-            if count == lastCount { stableRounds += 1 } else { stableRounds = 0 }
-            if stableRounds >= 10, count > before { return try driver.imageIDs(document: document) }
-            lastCount = count
-            Thread.sleep(forTimeInterval: 3)
-        }
-        throw CaptureOneError.timeout(String(localized: "import into \(document)", comment: "Detalle de espera agotada"))
     }
 
     private func writeReport(_ jobs: [ExportJob]) throws -> URL {

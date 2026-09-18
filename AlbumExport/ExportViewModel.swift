@@ -470,14 +470,19 @@ final class ExportViewModel {
                 }
                 verifyResult = result
                 if let searchPath = Self.argument(after: "--search") {
-                    FileHandle.standardError.write(Data("AlbumExport verify: files=\(result.filesOnDisk) orphans=\(result.orphans.count) missing=\(result.missing.count) unfiled=\(result.unfiled.count) suggested=\(result.unfiledWithSuggestion) albums=\(result.suggestedAlbumCount)\n".utf8))
+                    FileHandle.standardError.write(Data("AlbumExport verify: files=\(result.filesOnDisk) orphans=\(result.orphans.count) missing=\(result.missing.count) orphanCopies=\(result.orphanCopies) recoverable=\(result.recoverableOrphans.count) unfiled=\(result.unfiled.count) suggested=\(result.unfiledWithSuggestion) albums=\(result.suggestedAlbumCount)\n".utf8))
                     isVerifying = false
                     verifyCancellation = nil
                     runSearch(folder: URL(fileURLWithPath: searchPath))
                     return
                 }
+                // Automatización (pruebas con catálogos desechables): `--verify --recover-orphans --quit`.
+                if CommandLine.arguments.contains("--recover-orphans") {
+                    let done = try await worker.recoverOrphans(group: Self.recoveredGroupName, fallbackAlbum: Self.unfiledFallbackAlbumName, orphans: result.orphans, progress: nil)
+                    FileHandle.standardError.write(Data("AlbumExport recover: imported=\(done.imported) failed=\(done.failed) albums=\(done.albums)\n".utf8))
+                }
                 if autoQuit {
-                    FileHandle.standardError.write(Data("AlbumExport verify: files=\(result.filesOnDisk) orphans=\(result.orphans.count) missing=\(result.missing.count) unfiled=\(result.unfiled.count) suggested=\(result.unfiledWithSuggestion) albums=\(result.suggestedAlbumCount)\n".utf8))
+                    FileHandle.standardError.write(Data("AlbumExport verify: files=\(result.filesOnDisk) orphans=\(result.orphans.count) missing=\(result.missing.count) orphanCopies=\(result.orphanCopies) recoverable=\(result.recoverableOrphans.count) unfiled=\(result.unfiled.count) suggested=\(result.unfiledWithSuggestion) albums=\(result.suggestedAlbumCount)\n".utf8))
                 }
             } catch {
                 if !token.isCancelled { errorMessage = error.localizedDescription }
@@ -504,6 +509,7 @@ final class ExportViewModel {
         case .readingIndex: String(localized: "Reading the catalog index…", comment: "Progreso de verificación")
         case .checkingMissing(let done, let total): String(localized: "Checking \(done) of \(total) indexed files…", comment: "Progreso de verificación")
         case .scanningFiles(let count): String(localized: "Scanning Originals: \(count) files…", comment: "Progreso de verificación")
+        case .readingOrphans(let done, let total): String(localized: "Reading capture time of orphans: \(done) of \(total)…", comment: "Progreso de verificación")
         }
     }
 
@@ -618,8 +624,41 @@ final class ExportViewModel {
     }
 
     var showUnfiledAlbumConfirmation = false
+    var showRecoverOrphansConfirmation = false
 
-    /// Nombre del grupo que reúne las fotos sin clasificar (debe figurar en `CatalogReader.unfiledGroupNames`).
+    /// Grupo donde se recogen los huérfanos importados (debe figurar en `CatalogReader.generatedGroupNames`).
+    static var recoveredGroupName: String { String(localized: "Recovered orphans", comment: "Nombre del grupo de huérfanos importados") }
+
+    /// Solo a petición del usuario y tras confirmar: importar escribe en el catálogo.
+    func requestRecoverOrphans() {
+        guard verifyResult?.recoverableOrphans.isEmpty == false else { return }
+        showRecoverOrphansConfirmation = true
+    }
+
+    /// Importa en Capture One los huérfanos que no están en el catálogo y los reparte por álbum probable.
+    func recoverOrphans() {
+        guard let worker, let result = verifyResult else { return }
+        isVerifying = true
+        verifyProgress = String(localized: "Importing orphans into Capture One…", comment: "Progreso de verificación")
+        Task {
+            do {
+                let done = try await worker.recoverOrphans(group: Self.recoveredGroupName, fallbackAlbum: Self.unfiledFallbackAlbumName, orphans: result.orphans) { [weak self] text in
+                    Task { @MainActor in self?.verifyProgress = text }
+                }
+                verifyMessage = String(localized: "Group \"\(Self.recoveredGroupName)\": \(done.imported) photos imported into \(done.albums) albums.", comment: "Resumen tras importar huérfanos")
+                if done.failed > 0 {
+                    errorMessage = String(localized: "Capture One did not import or file \(done.failed) photos.", comment: "Aviso tras importar huérfanos")
+                }
+                if let refreshed = try? await worker.verify() { verifyResult = refreshed }
+            } catch {
+                errorMessage = error.localizedDescription
+            }
+            isVerifying = false
+        }
+    }
+
+
+    /// Nombre del grupo que reúne las fotos sin clasificar (debe figurar en `CatalogReader.generatedGroupNames`).
     static var unfiledAlbumName: String { String(localized: "Unfiled", comment: "Nombre del grupo de fotos sin clasificar") }
     /// Subálbum para las fotos a las que no se les ha encontrado álbum probable.
     /// Subálbum para las copias repetidas de fotos que ya están en un álbum.

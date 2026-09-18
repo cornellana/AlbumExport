@@ -445,21 +445,85 @@ actor CatalogWorker {
             // de una foto comparten nombre, y lo que llega aquí no está en ningún álbum.
             _ = try driver.ensureAlbum(document: document, path: path)
             let variantIDs = try reader.variantIDs(forImages: photos.map(\.imageID))
-            // Capture One puede no añadir nada sin dar error (visto con 100 fotos de golpe): se
-            // cuenta lo que el álbum contiene de verdad y, si falta, se reintenta en tandas pequeñas.
-            let before = try driver.variantCount(document: document, path: path)
-            for size in [200, 20] {
-                let current = try driver.variantCount(document: document, path: path)
-                guard current - before < variantIDs.count else { break }
-                for chunk in stride(from: 0, to: variantIDs.count, by: size).map({ Array(variantIDs[$0..<min($0 + size, variantIDs.count)]) }) {
-                    try driver.addToAlbum(document: document, path: path, variantIDs: chunk)
-                }
-            }
-            let reached = try driver.variantCount(document: document, path: path) - before
-            added += reached
+            added += try Self.addVerified(driver: driver, document: document, path: path, variantIDs: variantIDs)
             expected += variantIDs.count
         }
         return (added, expected - added, byAlbum.count)
+    }
+
+    /// Añade variantes a un álbum y devuelve cuántas han entrado de verdad. Capture One puede no
+    /// añadir nada sin dar error (visto con 100 fotos de golpe): se cuenta lo que el álbum
+    /// contiene y, si falta, se reintenta en tandas pequeñas.
+    private static func addVerified(driver: CaptureOneDriver, document: String, path: [String], variantIDs: [Int]) throws -> Int {
+        let before = try driver.variantCount(document: document, path: path)
+        for size in [200, 20] {
+            let current = try driver.variantCount(document: document, path: path)
+            guard current - before < variantIDs.count else { break }
+            for chunk in stride(from: 0, to: variantIDs.count, by: size).map({ Array(variantIDs[$0..<min($0 + size, variantIDs.count)]) }) {
+                try driver.addToAlbum(document: document, path: path, variantIDs: chunk)
+            }
+        }
+        return try driver.variantCount(document: document, path: path) - before
+    }
+
+    /// Importa en el catálogo los huérfanos que son fotos ausentes del índice y los reparte en
+    /// subálbumes del grupo indicado, uno por álbum probable. Los ficheros huérfanos no se tocan:
+    /// Capture One importa una copia (clon APFS, sin gasto de disco) desde una carpeta temporal,
+    /// y el huérfano original pasa a ser una copia sobrante que se retira con "Mover huérfanos".
+    /// - Returns: fotos importadas, las que Capture One no importó o no entraron en su álbum, y subálbumes usados.
+    func recoverOrphans(group: String, fallbackAlbum: String, orphans: [OrphanFile],
+                        progress: (@Sendable (String) -> Void)? = nil) throws -> (imported: Int, failed: Int, albums: Int) {
+        let recoverable = orphans.filter(\.isRecoverable)
+        guard !recoverable.isEmpty else { return (0, 0, 0) }
+        let fm = FileManager.default
+        // Restos de ejecuciones anteriores (se dejan un día por si Capture One aún copiaba).
+        let prefix = "AlbumExport-orphans-"
+        for old in (try? fm.contentsOfDirectory(at: fm.temporaryDirectory, includingPropertiesForKeys: [.creationDateKey])) ?? []
+        where old.lastPathComponent.hasPrefix(prefix) {
+            let created = (try? old.resourceValues(forKeys: [.creationDateKey]))?.creationDate ?? .distantPast
+            if created < Date().addingTimeInterval(-86400) { try? fm.removeItem(at: old) }
+        }
+        // Una carpeta por tanda: dos huérfanos con el mismo nombre no pueden compartir carpeta.
+        let staging = fm.temporaryDirectory.appendingPathComponent(prefix + UUID().uuidString, isDirectory: true)
+        var batches: [[OrphanFile]] = []
+        for orphan in recoverable {
+            let name = orphan.filename.lowercased()
+            if let index = batches.firstIndex(where: { batch in !batch.contains { $0.filename.lowercased() == name } }) {
+                batches[index].append(orphan)
+            } else {
+                batches.append([orphan])
+            }
+        }
+        let driver = CaptureOneDriver()
+        try driver.launch()
+        try driver.openCatalog(reader.rootURL)
+        let document = CaptureOneDriver.documentName(for: reader.rootURL)
+        var variantsByAlbum: [String: [Int]] = [:]
+        var imported = 0
+        for (number, batch) in batches.enumerated() {
+            let folder = staging.appendingPathComponent("batch\(number + 1)", isDirectory: true)
+            try fm.createDirectory(at: folder, withIntermediateDirectories: true)
+            for orphan in batch { try fm.copyItem(at: orphan.url, to: folder.appendingPathComponent(orphan.filename)) }
+            progress?(String(localized: "Importing \(batch.count) photos into \(document)…", comment: "Fase de traslado"))
+            let before = try driver.imageIDs(document: document)
+            try driver.importFolder(document: document, folder: folder)
+            let after = try driver.waitForImport(document: document, before: before.count, expected: batch.count)
+            let details = try driver.imageDetails(document: document, imageIDs: Array(after.subtracting(before)).sorted())
+            let byName = Dictionary(details.map { ($0.filename.lowercased(), $0) }, uniquingKeysWith: { first, _ in first })
+            for orphan in batch {
+                guard let detail = byName[orphan.filename.lowercased()] else { continue }
+                imported += 1
+                variantsByAlbum[orphan.suggestion?.album ?? fallbackAlbum, default: []].append(contentsOf: detail.variantIDs)
+            }
+        }
+        var added = 0, expected = 0
+        for (album, variantIDs) in variantsByAlbum.sorted(by: { $0.key < $1.key }) {
+            let path = [group, album]
+            _ = try driver.ensureAlbum(document: document, path: path)
+            added += try Self.addVerified(driver: driver, document: document, path: path, variantIDs: variantIDs)
+            expected += variantIDs.count
+        }
+        return (imported, (recoverable.count - imported) + (expected - added), variantsByAlbum.count)
     }
 
     func transfer(plan: ExportPlan, destinationCatalog: URL, cancellation: CancellationToken,

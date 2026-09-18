@@ -433,6 +433,22 @@
         }
       }
     },
+    "Capture One did not import or file %lld photos.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture One no ha importat o classificat %lld fotos."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture One no ha importado o clasificado %lld fotos."
+          }
+        }
+      }
+    },
     "Capture One did not open the catalog %@.": {
       "localizations": {
         "ca": {
@@ -493,6 +509,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Capture One exportará cada foto con sus ajustes y la importará en el catálogo de destino, recreando grupos y álbumes. No se borra nada del catálogo de origen."
+          }
+        }
+      }
+    },
+    "Capture One will import a copy of each photo that is not in the catalog and file it in an album named after its probable album, or \"%@\". The orphan files themselves are not touched: after importing they become spare copies that you can move out. Copies of photos already in the catalog are not imported.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture One importarà una còpia de cada foto que no és al catàleg i la posarà en un àlbum amb el nom del seu àlbum probable, o a \"%@\". Els fitxers orfes no es toquen: després d'importar passen a ser còpies sobrants que pots treure. Les còpies de fotos que ja són al catàleg no s'importen."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture One importará una copia de cada foto que no está en el catálogo y la pondrá en un álbum con el nombre de su álbum probable, o en \"%@\". Los ficheros huérfanos no se tocan: tras importar pasan a ser copias sobrantes que puedes sacar. Las copias de fotos que ya están en el catálogo no se importan."
           }
         }
       }
@@ -849,6 +881,38 @@
         }
       }
     },
+    "Copy of a photo already in the catalog": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Còpia d'una foto que ja és al catàleg"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copia de una foto que ya está en el catálogo"
+          }
+        }
+      }
+    },
+    "Copy of a photo in album %@": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Còpia d'una foto de l'àlbum %@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copia de una foto del álbum %@"
+          }
+        }
+      }
+    },
     "Copy photos to a folder": {
       "localizations": {
         "ca": {
@@ -1185,6 +1249,22 @@
         }
       }
     },
+    "Every file physically present in the Originals folder inside the catalog, whether the catalog knows it or not.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tots els fitxers que hi ha físicament a la carpeta Originals del catàleg, els conegui el catàleg o no."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Todos los ficheros que hay físicamente en la carpeta Originals del catálogo, los conozca el catálogo o no."
+          }
+        }
+      }
+    },
     "Every photo is in an album": {
       "localizations": {
         "ca": {
@@ -1489,6 +1569,70 @@
         }
       }
     },
+    "Group \"%@\": %lld photos imported into %lld albums.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grup \"%1$@\": %2$lld fotos importades en %3$lld àlbums."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grupo \"%1$@\": %2$lld fotos importadas en %3$lld álbumes."
+          }
+        }
+      }
+    },
+    "Import": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importa"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importar"
+          }
+        }
+      }
+    },
+    "Import %lld orphan photos into the group \"%@\"?": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importar %lld fotos òrfenes al grup \"%@\"?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Importar %lld fotos huérfanas al grupo \"%@\"?"
+          }
+        }
+      }
+    },
+    "Import the %lld photos not in the catalog…": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importa les %lld fotos que no són al catàleg…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importar las %lld fotos que no están en el catálogo…"
+          }
+        }
+      }
+    },
     "Importing %lld photos into %@…": {
       "localizations": {
         "ca": {
@@ -1501,6 +1645,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Importando %lld fotos en %@…"
+          }
+        }
+      }
+    },
+    "Importing orphans into Capture One…": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Important orfes al Capture One…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Importando huérfanos en Capture One…"
+          }
+        }
+      }
+    },
+    "In the catalog": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Al catàleg"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En el catálogo"
           }
         }
       }
@@ -1645,6 +1821,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ficheros ausentes: %lld"
+          }
+        }
+      }
+    },
+    "Missing: the catalog has the photo but its file is not where it expects it (it shows as offline in Capture One). The file was moved, renamed, deleted, or its disk is not connected.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perdut: el catàleg té la foto però el fitxer no és on l'espera (al Capture One surt com a offline). El fitxer s'ha mogut, reanomenat o esborrat, o el seu disc no està connectat."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Perdido: el catálogo tiene la foto pero su fichero no está donde lo espera (en Capture One sale como offline). El fichero se movió, se renombró, se borró o su disco no está conectado."
           }
         }
       }
@@ -1985,6 +2177,22 @@
         }
       }
     },
+    "Not a photo": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No és una foto"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No es una foto"
+          }
+        }
+      }
+    },
     "Not chosen": {
       "localizations": {
         "ca": {
@@ -2061,6 +2269,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sin álbum: %lld (%lld duplicados)"
+          }
+        }
+      }
+    },
+    "Not in any album: the photo is in the catalog and its file is fine, but it belongs to none of your albums (Recent Imports does not count). Usually photos you removed from an album while culling. Duplicates are repeated imports of a photo that is in an album.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sense àlbum: la foto és al catàleg i el fitxer està bé, però no pertany a cap dels teus àlbums (Recent Imports no compta). Solen ser fotos que vas treure d'un àlbum en fer neteja. Els duplicats són importacions repetides d'una foto que sí que és en un àlbum."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin álbum: la foto está en el catálogo y su fichero está bien, pero no pertenece a ninguno de tus álbumes (Recent Imports no cuenta). Suelen ser fotos que quitaste de un álbum al hacer limpieza. Los duplicados son importaciones repetidas de una foto que sí está en un álbum."
+          }
+        }
+      }
+    },
+    "Not in the catalog": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No és al catàleg"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No está en el catálogo"
           }
         }
       }
@@ -2241,18 +2481,34 @@
         }
       }
     },
-    "Orphans are files inside Originals that the index does not know. Moving them keeps the folder structure so they can be imported again.": {
+    "Orphan: a file inside the catalog's Originals folder that no catalog entry points to. It takes disk space but Capture One cannot see it. Most are spare copies left by repeated imports; a few are photos that never made it into the catalog.": {
       "localizations": {
         "ca": {
           "stringUnit": {
             "state": "translated",
-            "value": "Els orfes són fitxers dins d'Originals que l'índex no coneix. En moure'ls es conserva l'estructura de carpetes per poder-los importar de nou."
+            "value": "Orfe: fitxer dins la carpeta Originals del catàleg al qual cap registre apunta. Ocupa disc però el Capture One no el veu. La majoria són còpies sobrants d'importacions repetides; uns quants són fotos que no van arribar a entrar al catàleg."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Los huérfanos son ficheros dentro de Originals que el índice no conoce. Al moverlos se conserva la estructura de carpetas para poder importarlos de nuevo."
+            "value": "Huérfano: fichero dentro de la carpeta Originals del catálogo al que ningún registro apunta. Ocupa disco pero Capture One no lo ve. La mayoría son copias sobrantes de importaciones repetidas; unos pocos son fotos que nunca llegaron a entrar en el catálogo."
+          }
+        }
+      }
+    },
+    "Orphans are files inside Originals that the index does not know. %lld are spare copies of photos the catalog already has (same file name and capture time); the rest can be imported into the group \"%@\", one album per probable album. Moving orphans keeps the folder structure.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Els orfes són fitxers d'Originals que l'índex no coneix. %1$lld són còpies sobrants de fotos que el catàleg ja té (mateix nom i hora de captura); la resta es pot importar al grup \"%2$@\", amb un àlbum per cada àlbum probable. En moure orfes es conserva l'estructura de carpetes."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Los huérfanos son ficheros de Originals que el índice no conoce. %1$lld son copias sobrantes de fotos que el catálogo ya tiene (mismo nombre y hora de captura); el resto se puede importar al grupo \"%2$@\", con un álbum por cada álbum probable. Al mover huérfanos se conserva la estructura de carpetas."
           }
         }
       }
@@ -2449,6 +2705,22 @@
         }
       }
     },
+    "Photos the catalog database knows, including those stored outside the catalog and those in the Capture One trash.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotos que la base de dades del catàleg coneix, incloses les desades fora del catàleg i les de la paperera del Capture One."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotos que la base de datos del catálogo conoce, incluidas las guardadas fuera del catálogo y las de la papelera de Capture One."
+          }
+        }
+      }
+    },
     "Pink": {
       "localizations": {
         "ca": {
@@ -2561,6 +2833,22 @@
         }
       }
     },
+    "Reading capture time of orphans: %lld of %lld…": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Llegint l'hora de captura dels orfes: %1$lld de %2$lld…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leyendo la hora de captura de los huérfanos: %1$lld de %2$lld…"
+          }
+        }
+      }
+    },
     "Reading the catalog index…": {
       "localizations": {
         "ca": {
@@ -2589,6 +2877,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Listo para verificar"
+          }
+        }
+      }
+    },
+    "Recovered orphans": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Orfes recuperats"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Huérfanos recuperados"
           }
         }
       }
@@ -2637,6 +2941,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Actualizar ya exportadas"
+          }
+        }
+      }
+    },
+    "Repeated copy of another orphan": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Còpia repetida d'un altre orfe"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copia repetida de otro huérfano"
           }
         }
       }

@@ -187,6 +187,24 @@ struct CaptureOneDriver {
             """)
     }
 
+    /// Espera a que termine una importación (que Capture One lanza en segundo plano) contando
+    /// las imágenes de "All Images". Devuelve los identificadores de imagen al terminar.
+    func waitForImport(document: String, before: Int, expected: Int, timeout: TimeInterval = 1800) throws -> Set<Int> {
+        let deadline = Date().addingTimeInterval(timeout)
+        var lastCount = -1
+        var stableRounds = 0
+        while Date() < deadline {
+            let count = try imageCount(document: document)
+            if count >= before + expected { return try imageIDs(document: document) }
+            // Si el recuento deja de crecer (duplicados descartados), aceptar lo que haya.
+            if count == lastCount { stableRounds += 1 } else { stableRounds = 0 }
+            if stableRounds >= 10, count > before { return try imageIDs(document: document) }
+            lastCount = count
+            Thread.sleep(forTimeInterval: 3)
+        }
+        throw CaptureOneError.timeout(String(localized: "import into \(document)", comment: "Detalle de espera agotada"))
+    }
+
     func imageCount(document: String) throws -> Int {
         Int(try tell("tell document \(AppleScriptRunner.quote(document)) to return count of images of collection \"All Images\"", timeout: 60)) ?? 0
     }

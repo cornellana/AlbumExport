@@ -188,9 +188,9 @@ final class CatalogReader: @unchecked Sendable {
         return nodes.compactMap { pk, node -> Album? in
             guard node.ent == albumEnt || node.ent == smartEnt else { return nil }
             let parent = node.parent.flatMap { nodes[$0] }
-            // Los subálbumes de "Sin clasificar" repiten el nombre del álbum real: se tratan como
+            // Los subálbumes de los grupos generados repiten el nombre del álbum real: se tratan como
             // automáticos para que un patrón como "Barcelona*" no arrastre también los descartes.
-            let isAuto = parent.map { ($0.ent == folderEnt && Self.autoFolderNames.contains($0.name)) || Self.unfiledGroupNames.contains($0.name) } ?? false
+            let isAuto = parent.map { ($0.ent == folderEnt && Self.autoFolderNames.contains($0.name)) || Self.generatedGroupNames.contains($0.name) } ?? false
             return Album(id: pk, name: node.name, path: path(of: pk), isAuto: isAuto, isSmart: node.ent == smartEnt, imageCount: node.count)
         }
         .sorted { $0.path.localizedCaseInsensitiveCompare($1.path) == .orderedAscending }
@@ -372,39 +372,57 @@ final class CatalogReader: @unchecked Sendable {
         }.sorted { $0.expectedPath < $1.expectedPath }
     }
 
-    /// Nombres (en los idiomas de la app) del grupo que esta app crea con las fotos sin clasificar.
-    /// Sus subálbumes cuentan como álbum, pero no sirven de referencia para proponer álbum.
-    static let unfiledGroupNames: Set<String> = ["Unfiled", "Sin clasificar", "Sense classificar"]
+    /// Nombres (en los idiomas de la app) de los grupos que crea esta app: fotos sin clasificar y
+    /// huérfanos recuperados. Sus subálbumes cuentan como álbum, pero no sirven de referencia
+    /// para proponer álbum y los patrones los tratan como automáticos.
+    static let generatedGroupNames: Set<String> = ["Unfiled", "Sin clasificar", "Sense classificar",
+                                                   "Recovered orphans", "Huérfanos recuperados", "Orfes recuperats"]
 
-    /// Imágenes del índice que no están en ningún álbum creado por el usuario (ni en la
-    /// papelera). Los álbumes automáticos de "Recent Imports" / "Recent Captures" no cuentan; los del
-    /// grupo "Sin clasificar" sí. Cada resultado indica si otra foto con el mismo nombre ya
-    /// está en algún álbum y, si no, a qué álbum pertenece probablemente (ver `AlbumSuggester`).
-    func imagesNotInAnyAlbum() throws -> [UnfiledImage] {
-        guard let albumEnt = entities["AlbumCollection"] else { return [] }
+    /// Lo que el índice sabe de los álbumes de usuario, para detectar duplicados y proponer álbum.
+    private struct AlbumReference {
+        /// Imágenes (no en la papelera) que no están en ningún álbum de usuario.
+        var unfiledIDs: Set<Int> = []
+        var locations: [ImageLocation] = []
+        /// Nombre de fichero (minúsculas) -> primer álbum de referencia con una foto de ese nombre.
+        var filedNames: [String: String] = [:]
+        /// Nombre de fichero (minúsculas) -> horas de captura de las fotos de referencia con ese nombre.
+        var filedDates: [String: Set<Date?>] = [:]
+        var filed: [AlbumSuggester.FiledPhoto] = []
+        var albums: [Int: AlbumSuggester.AlbumInfo] = [:]
+
+        /// Duplicado = mismo nombre y misma hora de captura que una foto ya clasificada. El nombre
+        /// solo no basta: el contador de la cámara da la vuelta y repite nombres en fotos distintas.
+        /// Sin fecha en alguno de los dos lados, decide el nombre.
+        func duplicateAlbum(filename: String, captureDate: Date?) -> String? {
+            let name = filename.lowercased()
+            guard let album = filedNames[name], let dates = filedDates[name] else { return nil }
+            guard let date = captureDate else { return album }
+            return dates.contains(date) || dates.contains(nil) ? album : nil
+        }
+    }
+
+    private func albumReference() throws -> AlbumReference? {
+        guard let albumEnt = entities["AlbumCollection"] else { return nil }
         let folderEnt = entities["VirtualFolderCollection"] ?? -1
         let trashed = db.columns(of: "ZIMAGE").contains("ZISTRASHED") ? "AND IFNULL(i.ZISTRASHED, 0) = 0" : ""
         let autoNames = Self.autoFolderNames.map { "'\($0)'" }.joined(separator: ", ")
-        let unfiledNames = Self.unfiledGroupNames.map { "'\($0)'" }.joined(separator: ", ")
+        let generatedNames = Self.generatedGroupNames.map { "'\($0)'" }.joined(separator: ", ")
         let userAlbumMembership = """
             SELECT ic.ZIMAGE AS image, c.Z_PK AS albumID, c.ZNAME AS album, IFNULL(p.ZNAME, '') AS parentName FROM ZIMAGEINCOLLECTION ic
             JOIN ZCOLLECTION c ON c.Z_PK = ic.ZCOLLECTION
             LEFT JOIN ZCOLLECTION p ON p.Z_PK = c.ZPARENT
             WHERE c.Z_ENT = \(albumEnt) AND NOT (IFNULL(p.Z_ENT, -1) = \(folderEnt) AND IFNULL(p.ZNAME, '') IN (\(autoNames)))
             """
-        // Los subálbumes de "Sin clasificar" cuentan como álbum (la foto ya está recogida), pero
-        // no sirven de referencia: ni para marcar duplicados ni para proponer álbum.
-        let referenceMembership = "SELECT * FROM (\(userAlbumMembership)) WHERE parentName NOT IN (\(unfiledNames))"
-        let rows = try db.query("""
+        // Los subálbumes de los grupos generados cuentan como álbum (la foto ya está recogida),
+        // pero no sirven de referencia: ni para marcar duplicados ni para proponer álbum.
+        let referenceMembership = "SELECT * FROM (\(userAlbumMembership)) WHERE parentName NOT IN (\(generatedNames))"
+        var reference = AlbumReference()
+        reference.unfiledIDs = Set(try db.query("""
             SELECT i.Z_PK AS pk FROM ZIMAGE i
             WHERE NOT EXISTS (SELECT 1 FROM (\(userAlbumMembership)) m WHERE m.image = i.Z_PK) \(trashed)
-            """)
-        let ids = Set(rows.compactMap { $0.int("pk") })
-        let locations = try allImageLocations()
-        let locationByID = Dictionary(locations.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        // Nombre de fichero (minúsculas) -> primer álbum de usuario que contiene una foto con ese nombre.
-        var filedNames: [String: String] = [:]
-        var filedDates: [String: Set<Date?>] = [:]
+            """).compactMap { $0.int("pk") })
+        reference.locations = try allImageLocations()
+        let locationByID = Dictionary(reference.locations.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         var albumNames: [Int: String] = [:]
         var albumsByImage: [Int: Set<Int>] = [:]
         // Una copia clasificada que está en la papelera no sirve de referencia: si se vacía, la
@@ -417,42 +435,76 @@ final class CatalogReader: @unchecked Sendable {
                   let loc = locationByID[image] else { continue }
             albumNames[albumID] = album
             albumsByImage[image, default: []].insert(albumID)
-            if filedNames[loc.filename.lowercased()] == nil { filedNames[loc.filename.lowercased()] = album }
-            filedDates[loc.filename.lowercased(), default: []].insert(loc.captureDate)
-        }
-        // Duplicado = mismo nombre y misma hora de captura que una foto ya clasificada. El nombre
-        // solo no basta: el contador de la cámara da la vuelta y repite nombres en fotos distintas.
-        // Sin fecha en alguno de los dos lados, decide el nombre.
-        func duplicateAlbum(_ loc: ImageLocation) -> String? {
-            let name = loc.filename.lowercased()
-            guard let album = filedNames[name], let dates = filedDates[name] else { return nil }
-            guard let date = loc.captureDate else { return album }
-            return dates.contains(date) || dates.contains(nil) ? album : nil
+            if reference.filedNames[loc.filename.lowercased()] == nil { reference.filedNames[loc.filename.lowercased()] = album }
+            reference.filedDates[loc.filename.lowercased(), default: []].insert(loc.captureDate)
         }
         // Intervalo de captura de cada álbum y fotos clasificadas con fecha, para proponer álbum.
         var ranges: [Int: (first: Date, last: Date)] = [:]
-        var filed: [AlbumSuggester.FiledPhoto] = []
         for (image, albumIDs) in albumsByImage {
             guard let loc = locationByID[image], let date = loc.captureDate else { continue }
-            filed.append(.init(filename: loc.filename, captureDate: date, albumIDs: albumIDs))
+            reference.filed.append(.init(filename: loc.filename, captureDate: date, albumIDs: albumIDs))
             for albumID in albumIDs {
                 let range = ranges[albumID] ?? (date, date)
                 ranges[albumID] = (min(range.first, date), max(range.last, date))
             }
         }
-        let albums = albumNames.reduce(into: [Int: AlbumSuggester.AlbumInfo]()) { result, entry in
+        reference.albums = albumNames.reduce(into: [:]) { result, entry in
             let span = ranges[entry.key].map { $0.last.timeIntervalSince($0.first) } ?? .greatestFiniteMagnitude
             result[entry.key] = .init(name: entry.value, span: span)
         }
-        let unfiled = locations.filter { ids.contains($0.id) }
+        return reference
+    }
+
+    /// Imágenes del índice que no están en ningún álbum creado por el usuario (ni en la
+    /// papelera). Los álbumes automáticos de "Recent Imports" / "Recent Captures" no cuentan; los de
+    /// los grupos que crea esta app sí. Cada resultado indica si es un duplicado de una foto ya
+    /// clasificada y, si no, a qué álbum pertenece probablemente (ver `AlbumSuggester`).
+    func imagesNotInAnyAlbum() throws -> [UnfiledImage] {
+        guard let reference = try albumReference() else { return [] }
+        let unfiled = reference.locations.filter { reference.unfiledIDs.contains($0.id) }
+        let duplicates = Dictionary(uniqueKeysWithValues: unfiled.map { ($0.id, reference.duplicateAlbum(filename: $0.filename, captureDate: $0.captureDate)) })
         let suggestions = AlbumSuggester.suggest(
-            for: unfiled.filter { duplicateAlbum($0) == nil }.map { ($0.id, $0.filename, $0.captureDate) },
-            filed: filed, albums: albums)
+            for: unfiled.filter { duplicates[$0.id] == .some(nil) }.map { ($0.id, $0.filename, $0.captureDate) },
+            filed: reference.filed, albums: reference.albums)
         return unfiled
             .map { UnfiledImage(imageID: $0.id, filename: $0.filename, path: expectedURL($0)?.path ?? "?",
-                                duplicateInAlbum: duplicateAlbum($0),
+                                duplicateInAlbum: duplicates[$0.id] ?? nil,
                                 captureDate: $0.captureDate, suggestion: suggestions[$0.id]) }
             .sorted { $0.path < $1.path }
+    }
+
+    /// Clasifica los huérfanos: copia de una foto que el índice ya tiene (mismo nombre y misma hora
+    /// de captura; sin fecha, mismo nombre y tamaño) o foto que no está en el catálogo, con su
+    /// álbum probable. Varias copias huérfanas de una misma foto nueva: solo la primera se marca
+    /// como importable.
+    func classify(_ orphans: [OrphanFile]) throws -> [OrphanFile] {
+        guard let reference = try albumReference() else { return orphans }
+        // Todas las indexadas (papelera incluida): nombre -> (fecha, tamaño, id).
+        var indexed: [String: [ImageLocation]] = [:]
+        for loc in reference.locations { indexed[loc.filename.lowercased(), default: []].append(loc) }
+        var result = orphans
+        var seen: Set<String> = []
+        var candidates: [(id: Int, filename: String, captureDate: Date?)] = []
+        for index in result.indices {
+            let orphan = result[index]
+            let name = orphan.filename.lowercased()
+            let match = indexed[name]?.first { loc in
+                if let a = orphan.captureDate, let b = loc.captureDate { return a == b }
+                return loc.size == orphan.size
+            }
+            if let match {
+                result[index].copyOfIndexed = true
+                result[index].indexedAlbum = reference.duplicateAlbum(filename: match.filename, captureDate: match.captureDate)
+                continue
+            }
+            guard orphan.isImportable else { continue }
+            let key = "\(name)|\(orphan.captureDate?.timeIntervalSince1970 ?? -1)|\(orphan.captureDate == nil ? orphan.size : 0)"
+            guard seen.insert(key).inserted else { result[index].repeatedOrphan = true; continue }
+            candidates.append((index, orphan.filename, orphan.captureDate))
+        }
+        let suggestions = AlbumSuggester.suggest(for: candidates, filed: reference.filed, albums: reference.albums)
+        for (index, suggestion) in suggestions { result[index].suggestion = suggestion }
+        return result
     }
 
     /// Identificadores de variante (= `id` en AppleScript) de las imágenes dadas.

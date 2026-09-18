@@ -7,7 +7,23 @@ struct OrphanFile: Identifiable, Hashable, Sendable {
     let relativePath: String
     let url: URL
     let size: Int64
+    /// Hora de captura EXIF del fichero, para compararlo con el índice y proponer álbum.
+    var captureDate: Date? = nil
+    /// El índice ya tiene esta foto (mismo nombre y hora de captura): el fichero sobra.
+    var copyOfIndexed = false
+    /// Álbum de usuario donde está la foto indexada de la que este fichero es copia.
+    var indexedAlbum: String? = nil
+    /// Otra copia huérfana de una foto nueva que ya figura antes en la lista.
+    var repeatedOrphan = false
+    /// Álbum al que probablemente pertenece una foto que no está en el catálogo.
+    var suggestion: AlbumSuggestion? = nil
     var id: String { relativePath }
+    var filename: String { (relativePath as NSString).lastPathComponent }
+    /// Tipos que Capture One sabe importar; el resto (bases de datos, laterales de otras apps) no.
+    var isImportable: Bool { Self.importableExtensions.contains((relativePath as NSString).pathExtension.lowercased()) }
+    /// Foto que no está en el catálogo y merece importarse.
+    var isRecoverable: Bool { !copyOfIndexed && !repeatedOrphan && isImportable }
+    static let importableExtensions: Set<String> = ["arw", "dng", "tif", "tiff", "jpg", "jpeg", "png", "heic", "heif", "cr2", "cr3", "nef", "raf", "orf", "rw2", "eip", "psd"]
 }
 
 /// Imagen del índice cuyo fichero no existe en la ruta esperada (offline).
@@ -69,6 +85,9 @@ struct VerifyResult: Sendable {
     var missing: [MissingFile] = []
     var unfiled: [UnfiledImage] = []
     var orphanBytes: Int64 { orphans.reduce(0) { $0 + $1.size } }
+    /// Huérfanos que son fotos ausentes del catálogo (una por foto): candidatos a importar.
+    var recoverableOrphans: [OrphanFile] { orphans.filter(\.isRecoverable) }
+    var orphanCopies: Int { orphans.filter { $0.copyOfIndexed || $0.repeatedOrphan }.count }
     var foundCount: Int { missing.filter { $0.candidate != nil }.count }
     /// Sin álbum y sin otra foto del mismo nombre ya clasificada: candidatas al álbum "Sin clasificar".
     var unfiledToFile: [UnfiledImage] { unfiled.filter { $0.duplicateInAlbum == nil } }
@@ -94,6 +113,7 @@ enum CatalogVerifier {
         case readingIndex
         case checkingMissing(done: Int, total: Int)
         case scanningFiles(count: Int)
+        case readingOrphans(done: Int, total: Int)
     }
 
     static func scan(catalog: CatalogReader, cancellation: CancellationToken? = nil,
@@ -132,6 +152,13 @@ enum CatalogVerifier {
             result.orphans.append(OrphanFile(relativePath: relative, url: url, size: Int64(values?.fileSize ?? 0)))
         }
         result.orphans.sort { $0.relativePath < $1.relativePath }
+        // Hora de captura de cada huérfano importable, para saber si el índice ya tiene esa foto.
+        for index in result.orphans.indices where result.orphans[index].isImportable {
+            if cancellation?.isCancelled == true { throw ExportInterruptionError.cancelled }
+            if index % 25 == 0 { progress?(.readingOrphans(done: index, total: result.orphans.count)) }
+            result.orphans[index].captureDate = captureDate(of: result.orphans[index].url)
+        }
+        result.orphans = try catalog.classify(result.orphans)
         result.missing = matchOrphans(result.missing, orphans: result.orphans)
         return result
     }
@@ -367,7 +394,7 @@ enum CatalogVerifier {
     static func writeReport(_ result: VerifyResult, catalogName: String, to url: URL) throws {
         func cell(_ text: String) -> String { "\"" + text.replacingOccurrences(of: "\"", with: "\"\"") + "\"" }
         var lines = ["kind,path,size,found_at_or_album"]
-        for o in result.orphans { lines.append([cell("orphan"), cell(o.relativePath), String(o.size), ""].joined(separator: ",")) }
+        for o in result.orphans { lines.append([cell(o.copyOfIndexed || o.repeatedOrphan ? "orphan_copy" : "orphan"), cell(o.relativePath), String(o.size), cell(o.indexedAlbum ?? o.suggestion?.album ?? "")].joined(separator: ",")) }
         for m in result.missing { lines.append([cell("missing"), cell(m.expectedPath), m.size.map(String.init) ?? "", cell(m.candidate?.path ?? "")].joined(separator: ",")) }
         for u in result.unfiled { lines.append([cell(u.duplicateInAlbum == nil ? "not_in_album" : "not_in_album_duplicate"), cell(u.path), "", cell(u.duplicateInAlbum ?? u.suggestion?.album ?? "")].joined(separator: ",")) }
         try lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
