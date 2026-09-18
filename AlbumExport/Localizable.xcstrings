@@ -129,18 +129,18 @@
         }
       }
     },
-    "Add %lld photos to the album \"%@\"?": {
+    "Add %lld photos to the group \"%@\"?": {
       "localizations": {
         "ca": {
           "stringUnit": {
             "state": "translated",
-            "value": "Vols afegir %lld fotos a l'àlbum \"%@\"?"
+            "value": "Afegir %lld fotos al grup \"%@\"?"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "¿Añadir %lld fotos al álbum \"%@\"?"
+            "value": "¿Añadir %lld fotos al grupo \"%@\"?"
           }
         }
       }
@@ -173,22 +173,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Álbum"
-          }
-        }
-      }
-    },
-    "Album \"%@\": %lld photos added.": {
-      "localizations": {
-        "ca": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Àlbum \"%@\": %lld fotos afegides."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Álbum \"%@\": %lld fotos añadidas."
           }
         }
       }
@@ -497,18 +481,18 @@
         }
       }
     },
-    "Capture One will open the catalog and add the photos to that album (created if needed). Photos whose file name is already in another album are skipped.": {
+    "Capture One will open the catalog and create that group with one album per probable album, plus \"%@\" for the rest. Photos whose file name is already in another album are skipped. Nothing is removed or moved.": {
       "localizations": {
         "ca": {
           "stringUnit": {
             "state": "translated",
-            "value": "Capture One obrirà el catàleg i afegirà les fotos a aquest àlbum (es crea si no existeix). Les fotos amb un nom de fitxer que ja és en un altre àlbum s'ometen."
+            "value": "Capture One obrirà el catàleg i crearà aquest grup amb un àlbum per cada àlbum probable, més \"%@\" per a la resta. Les fotos amb un nom de fitxer que ja és en un altre àlbum s'ometen. No s'esborra ni es mou res."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Capture One abrirá el catálogo y añadirá las fotos a ese álbum (se crea si no existe). Las fotos cuyo nombre de fichero ya está en otro álbum se omiten."
+            "value": "Capture One abrirá el catálogo y creará ese grupo con un álbum por cada álbum probable, más \"%@\" para el resto. Las fotos cuyo nombre de fichero ya está en otro álbum se omiten. No se borra ni se mueve nada."
           }
         }
       }
@@ -865,34 +849,34 @@
         }
       }
     },
-    "Create \"%@\" album in Capture One": {
+    "Create \"%@\" group in Capture One": {
       "localizations": {
         "ca": {
           "stringUnit": {
             "state": "translated",
-            "value": "Crea l'àlbum \"%@\" al Capture One"
+            "value": "Crea el grup \"%@\" al Capture One"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Crear álbum \"%@\" en Capture One"
+            "value": "Crear grupo \"%@\" en Capture One"
           }
         }
       }
     },
-    "Create album": {
+    "Create albums": {
       "localizations": {
         "ca": {
           "stringUnit": {
             "state": "translated",
-            "value": "Crea l'àlbum"
+            "value": "Crea els àlbums"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Crear álbum"
+            "value": "Crear álbumes"
           }
         }
       }
@@ -929,18 +913,18 @@
         }
       }
     },
-    "Creating the album in Capture One…": {
+    "Creating the albums in Capture One…": {
       "localizations": {
         "ca": {
           "stringUnit": {
             "state": "translated",
-            "value": "Creant l'àlbum al Capture One…"
+            "value": "Creant els àlbums al Capture One…"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Creando el álbum en Capture One…"
+            "value": "Creando los álbumes en Capture One…"
           }
         }
       }
@@ -1441,6 +1425,22 @@
         }
       }
     },
+    "Group \"%@\": %lld photos added to %lld albums.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grup \"%1$@\": %2$lld fotos afegides en %3$lld àlbums."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Grupo \"%1$@\": %2$lld fotos añadidas en %3$lld álbumes."
+          }
+        }
+      }
+    },
     "Importing %lld photos into %@…": {
       "localizations": {
         "ca": {
@@ -1905,6 +1905,22 @@
         }
       }
     },
+    "No probable album": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sense àlbum probable"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sin álbum probable"
+          }
+        }
+      }
+    },
     "No version information in this catalog.": {
       "localizations": {
         "ca": {
@@ -2337,18 +2353,18 @@
         }
       }
     },
-    "Photos in the index but in no user album. %lld share their file name with a photo already in an album and are treated as duplicates: they are not added.": {
+    "Photos in the index but in no user album. %lld share their file name with a photo already in an album and are treated as duplicates: they are not added. A probable album was found for %lld of the rest, from capture time and file name sequence (%lld albums).": {
       "localizations": {
         "ca": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fotos a l'índex però a cap àlbum d'usuari. %lld comparteixen nom de fitxer amb una foto ja classificada i es tracten com a duplicats: no s'afegeixen."
+            "value": "Fotos a l'índex que no són en cap àlbum d'usuari. %1$lld comparteixen nom de fitxer amb una foto que ja és en un àlbum i es tracten com a duplicats: no s'afegeixen. S'ha trobat àlbum probable per a %2$lld de la resta, per hora de captura i seqüència del nom (%3$lld àlbums)."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fotos en el índice pero en ningún álbum de usuario. %lld comparten nombre de fichero con una foto ya clasificada y se tratan como duplicados: no se añaden."
+            "value": "Fotos en el índice que no están en ningún álbum de usuario. %1$lld comparten nombre de fichero con una foto que ya está en un álbum y se tratan como duplicados: no se añaden. Se ha encontrado álbum probable para %2$lld del resto, por hora de captura y secuencia del nombre (%3$lld álbumes)."
           }
         }
       }
@@ -2429,6 +2445,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pulsa Verificar para comparar la carpeta Originals con el índice del catálogo."
+          }
+        }
+      }
+    },
+    "Probable album": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Àlbum probable"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Álbum probable"
           }
         }
       }

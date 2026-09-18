@@ -370,36 +370,68 @@ final class CatalogReader: @unchecked Sendable {
         }.sorted { $0.expectedPath < $1.expectedPath }
     }
 
+    /// Nombres (en los idiomas de la app) del grupo que esta app crea con las fotos sin clasificar.
+    /// Sus subálbumes son una zona de paso: ni cuentan como álbum ni sirven para proponer álbum.
+    static let unfiledGroupNames: Set<String> = ["Unfiled", "Sin clasificar", "Sense classificar"]
+
     /// Imágenes del índice que no están en ningún álbum creado por el usuario (ni en la
-    /// papelera). Los álbumes automáticos de "Recent Imports" / "Recent Captures" no cuentan.
-    /// Cada resultado indica si otra foto con el mismo nombre ya está en algún álbum.
+    /// papelera). Los álbumes automáticos de "Recent Imports" / "Recent Captures" y los del grupo
+    /// "Sin clasificar" no cuentan. Cada resultado indica si otra foto con el mismo nombre ya
+    /// está en algún álbum y, si no, a qué álbum pertenece probablemente (ver `AlbumSuggester`).
     func imagesNotInAnyAlbum() throws -> [UnfiledImage] {
         guard let albumEnt = entities["AlbumCollection"] else { return [] }
         let folderEnt = entities["VirtualFolderCollection"] ?? -1
         let trashed = db.columns(of: "ZIMAGE").contains("ZISTRASHED") ? "AND IFNULL(i.ZISTRASHED, 0) = 0" : ""
         let autoNames = Self.autoFolderNames.map { "'\($0)'" }.joined(separator: ", ")
+        let unfiledNames = Self.unfiledGroupNames.map { "'\($0)'" }.joined(separator: ", ")
         let userAlbumMembership = """
-            SELECT ic.ZIMAGE AS image, c.ZNAME AS album FROM ZIMAGEINCOLLECTION ic
+            SELECT ic.ZIMAGE AS image, c.Z_PK AS albumID, c.ZNAME AS album FROM ZIMAGEINCOLLECTION ic
             JOIN ZCOLLECTION c ON c.Z_PK = ic.ZCOLLECTION
             LEFT JOIN ZCOLLECTION p ON p.Z_PK = c.ZPARENT
-            WHERE c.Z_ENT = \(albumEnt) AND NOT (p.Z_ENT = \(folderEnt) AND p.ZNAME IN (\(autoNames)))
+            WHERE c.Z_ENT = \(albumEnt) AND NOT (IFNULL(p.Z_ENT, -1) = \(folderEnt) AND IFNULL(p.ZNAME, '') IN (\(autoNames)))
+              AND IFNULL(p.ZNAME, '') NOT IN (\(unfiledNames))
             """
         let rows = try db.query("""
             SELECT i.Z_PK AS pk FROM ZIMAGE i
             WHERE NOT EXISTS (SELECT 1 FROM (\(userAlbumMembership)) m WHERE m.image = i.Z_PK) \(trashed)
             """)
         let ids = Set(rows.compactMap { $0.int("pk") })
+        let locations = try allImageLocations()
+        let locationByID = Dictionary(locations.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         // Nombre de fichero (minúsculas) -> primer álbum de usuario que contiene una foto con ese nombre.
         var filedNames: [String: String] = [:]
-        for row in try db.query("""
-            SELECT LOWER(i.ZIMAGEFILENAME) AS name, MIN(m.album) AS album
-            FROM (\(userAlbumMembership)) m JOIN ZIMAGE i ON i.Z_PK = m.image GROUP BY LOWER(i.ZIMAGEFILENAME)
-            """) {
-            if let name = row.string("name"), let album = row.string("album") { filedNames[name] = album }
+        var albumNames: [Int: String] = [:]
+        var albumsByImage: [Int: Set<Int>] = [:]
+        for row in try db.query("SELECT m.image AS image, m.albumID AS albumID, m.album AS album FROM (\(userAlbumMembership)) m ORDER BY m.album") {
+            guard let image = row.int("image"), let albumID = row.int("albumID"), let album = row.string("album"),
+                  let loc = locationByID[image] else { continue }
+            albumNames[albumID] = album
+            albumsByImage[image, default: []].insert(albumID)
+            if filedNames[loc.filename.lowercased()] == nil { filedNames[loc.filename.lowercased()] = album }
         }
-        return try allImageLocations().filter { ids.contains($0.id) }
+        // Intervalo de captura de cada álbum y fotos clasificadas con fecha, para proponer álbum.
+        var ranges: [Int: (first: Date, last: Date)] = [:]
+        var filed: [AlbumSuggester.FiledPhoto] = []
+        for (image, albumIDs) in albumsByImage {
+            guard let loc = locationByID[image], let date = loc.captureDate else { continue }
+            filed.append(.init(filename: loc.filename, captureDate: date, albumIDs: albumIDs))
+            for albumID in albumIDs {
+                let range = ranges[albumID] ?? (date, date)
+                ranges[albumID] = (min(range.first, date), max(range.last, date))
+            }
+        }
+        let albums = albumNames.reduce(into: [Int: AlbumSuggester.AlbumInfo]()) { result, entry in
+            let span = ranges[entry.key].map { $0.last.timeIntervalSince($0.first) } ?? .greatestFiniteMagnitude
+            result[entry.key] = .init(name: entry.value, span: span)
+        }
+        let unfiled = locations.filter { ids.contains($0.id) }
+        let suggestions = AlbumSuggester.suggest(
+            for: unfiled.filter { filedNames[$0.filename.lowercased()] == nil }.map { ($0.id, $0.filename, $0.captureDate) },
+            filed: filed, albums: albums)
+        return unfiled
             .map { UnfiledImage(imageID: $0.id, filename: $0.filename, path: expectedURL($0)?.path ?? "?",
-                                duplicateInAlbum: filedNames[$0.filename.lowercased()]) }
+                                duplicateInAlbum: filedNames[$0.filename.lowercased()],
+                                captureDate: $0.captureDate, suggestion: suggestions[$0.id]) }
             .sorted { $0.path < $1.path }
     }
 

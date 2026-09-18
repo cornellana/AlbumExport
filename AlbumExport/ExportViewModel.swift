@@ -470,14 +470,14 @@ final class ExportViewModel {
                 }
                 verifyResult = result
                 if let searchPath = Self.argument(after: "--search") {
-                    FileHandle.standardError.write(Data("AlbumExport verify: files=\(result.filesOnDisk) orphans=\(result.orphans.count) missing=\(result.missing.count) unfiled=\(result.unfiled.count)\n".utf8))
+                    FileHandle.standardError.write(Data("AlbumExport verify: files=\(result.filesOnDisk) orphans=\(result.orphans.count) missing=\(result.missing.count) unfiled=\(result.unfiled.count) suggested=\(result.unfiledWithSuggestion) albums=\(result.suggestedAlbumCount)\n".utf8))
                     isVerifying = false
                     verifyCancellation = nil
                     runSearch(folder: URL(fileURLWithPath: searchPath))
                     return
                 }
                 if autoQuit {
-                    FileHandle.standardError.write(Data("AlbumExport verify: files=\(result.filesOnDisk) orphans=\(result.orphans.count) missing=\(result.missing.count) unfiled=\(result.unfiled.count)\n".utf8))
+                    FileHandle.standardError.write(Data("AlbumExport verify: files=\(result.filesOnDisk) orphans=\(result.orphans.count) missing=\(result.missing.count) unfiled=\(result.unfiled.count) suggested=\(result.unfiledWithSuggestion) albums=\(result.suggestedAlbumCount)\n".utf8))
                 }
             } catch {
                 if !token.isCancelled { errorMessage = error.localizedDescription }
@@ -619,8 +619,10 @@ final class ExportViewModel {
 
     var showUnfiledAlbumConfirmation = false
 
-    /// Nombre del álbum que reúne las fotos sin clasificar.
-    static var unfiledAlbumName: String { String(localized: "Unfiled", comment: "Nombre del álbum de fotos sin clasificar") }
+    /// Nombre del grupo que reúne las fotos sin clasificar (debe figurar en `CatalogReader.unfiledGroupNames`).
+    static var unfiledAlbumName: String { String(localized: "Unfiled", comment: "Nombre del grupo de fotos sin clasificar") }
+    /// Subálbum para las fotos a las que no se les ha encontrado álbum probable.
+    static var unfiledFallbackAlbumName: String { String(localized: "No probable album", comment: "Subálbum de fotos sin álbum probable") }
 
     /// Solo a petición del usuario y tras confirmar: nunca se crea automáticamente.
     func requestUnfiledAlbum() {
@@ -628,15 +630,15 @@ final class ExportViewModel {
         showUnfiledAlbumConfirmation = true
     }
 
-    /// Crea en Capture One el álbum "Sin clasificar" con las fotos sin álbum que no sean duplicados.
+    /// Crea en Capture One el grupo "Sin clasificar" con un subálbum por álbum probable.
     func createUnfiledAlbum() {
         guard let worker, let result = verifyResult else { return }
         isVerifying = true
-        verifyProgress = String(localized: "Creating the album in Capture One…", comment: "Progreso de verificación")
+        verifyProgress = String(localized: "Creating the albums in Capture One…", comment: "Progreso de verificación")
         Task {
             do {
-                let added = try await worker.createUnfiledAlbum(named: Self.unfiledAlbumName, images: result.unfiled)
-                verifyMessage = String(localized: "Album \"\(Self.unfiledAlbumName)\": \(added) photos added.", comment: "Resumen tras crear el álbum")
+                let done = try await worker.createUnfiledAlbums(group: Self.unfiledAlbumName, fallbackAlbum: Self.unfiledFallbackAlbumName, images: result.unfiled)
+                verifyMessage = String(localized: "Group \"\(Self.unfiledAlbumName)\": \(done.added) photos added to \(done.albums) albums.", comment: "Resumen tras crear el grupo de sin clasificar")
             } catch {
                 errorMessage = error.localizedDescription
             }

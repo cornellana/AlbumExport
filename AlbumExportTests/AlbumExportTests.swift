@@ -519,6 +519,7 @@ struct FixtureCatalog {
     let reader = try CatalogReader(url: url)
     let result = try CatalogVerifier.scan(catalog: reader)
     print("VERIFY-REAL files=\(result.filesOnDisk) referenced=\(result.referenced) orphans=\(result.orphans.count) missing=\(result.missing.count) unfiled=\(result.unfiled.count) matched=\(result.foundCount) seconds=\(Int(Date().timeIntervalSince(start)))")
+    print("VERIFY-REAL toFile=\(result.unfiledToFile.count) suggested=\(result.unfiledWithSuggestion) albums=\(result.suggestedAlbumCount) nearby=\(result.unfiledToFile.filter { $0.suggestion?.confidence == .nearby }.count)")
     for o in result.orphans.prefix(5) { print("VERIFY-REAL orphan \(o.relativePath) \(o.size)") }
     for m in result.missing.prefix(5) { print("VERIFY-REAL missing \(m.expectedPath) -> \(m.candidate?.path ?? "-")") }
     #expect(result.filesOnDisk > 0)
@@ -589,4 +590,56 @@ struct FixtureCatalog {
     CGImageDestinationAddImage(destination, image, [kCGImagePropertyExifDictionary: exif] as CFDictionary)
     #expect(CGImageDestinationFinalize(destination))
     #expect(CatalogVerifier.captureDate(of: url) == Date(timeIntervalSince1970: 1_748_681_676))
+}
+
+// MARK: - Álbum probable de las fotos sin clasificar
+
+/// Entre dos fotos de un mismo álbum: ese álbum, prefiriendo el de la sesión a una recopilación.
+/// En la frontera entre dos álbumes decide la secuencia del nombre; lejos de todo, nada.
+@Test func suggestsProbableAlbumFromCaptureTimeAndSequence() {
+    func date(_ hours: Double) -> Date { Date(timeIntervalSince1970: 1_700_000_000 + hours * 3600) }
+    let albums: [Int: AlbumSuggester.AlbumInfo] = [
+        1: .init(name: "Toscana 2026", span: 5 * 86400),
+        2: .init(name: "Portfolio", span: 900 * 86400),
+        3: .init(name: "Hockey 2026", span: 7200),
+    ]
+    let filed: [AlbumSuggester.FiledPhoto] = [
+        .init(filename: "_AM20100.ARW", captureDate: date(0), albumIDs: [1, 2]),
+        .init(filename: "_AM20110.ARW", captureDate: date(1), albumIDs: [1, 2]),
+        .init(filename: "_AM20200.ARW", captureDate: date(10), albumIDs: [3]),
+    ]
+    let suggestions = AlbumSuggester.suggest(for: [
+        (id: 1, filename: "_AM20105.ARW", captureDate: date(0.5)),    // entre dos de Toscana (y de Portfolio)
+        (id: 2, filename: "_AM20112.ARW", captureDate: date(5.6)),    // frontera: más cerca en hora de Hockey, en secuencia de Toscana
+        (id: 3, filename: "_AM20201.ARW", captureDate: date(10.1)),   // solo un vecino
+        (id: 4, filename: "_AM29000.ARW", captureDate: date(500)),    // lejos de todo
+        (id: 5, filename: "SCAN.tif", captureDate: nil),              // sin fecha
+    ], filed: filed, albums: albums)
+    #expect(suggestions[1] == AlbumSuggestion(album: "Toscana 2026", confidence: .between))
+    #expect(suggestions[2] == AlbumSuggestion(album: "Toscana 2026", confidence: .nearby))
+    #expect(suggestions[3] == AlbumSuggestion(album: "Hockey 2026", confidence: .nearby))
+    #expect(suggestions[4] == nil)
+    #expect(suggestions[5] == nil)
+    #expect(AlbumSuggester.sequence(of: "_AM21178.ARW")! == ("_am", 21178))
+    #expect(AlbumSuggester.sequence(of: "LONE.jpg") == nil)
+}
+
+/// El lector propone álbum con los datos del índice y no cuenta como álbum los subálbumes del
+/// grupo "Sin clasificar" que crea esta app.
+@Test func readerSuggestsAlbumsAndIgnoresUnfiledGroup() throws {
+    let fixture = try FixtureCatalog()
+    defer { fixture.cleanup() }
+    let db = try SQLiteDatabase(path: fixture.bundle.appendingPathComponent("Fixture.cocatalogdb").path)
+    try db.execute("""
+        ALTER TABLE ZIMAGE ADD COLUMN ZEXP_DATE FLOAT;
+        UPDATE ZIMAGE SET ZEXP_DATE = 1700000000 WHERE Z_PK = 10;
+        UPDATE ZIMAGE SET ZEXP_DATE = 1700000600 WHERE Z_PK = 16;
+        UPDATE ZIMAGE SET ZEXP_DATE = 1700001200 WHERE Z_PK = 11;
+        INSERT INTO ZCOLLECTION VALUES (7,20,'Sin clasificar',1),(2,21,'Andorra 2025',20);
+        INSERT INTO ZIMAGEINCOLLECTION (ZCOLLECTION, ZIMAGE) VALUES (21,16);
+        """)
+    let unfiled = try CatalogReader(url: fixture.bundle).imagesNotInAnyAlbum()
+    let lone = try #require(unfiled.first { $0.imageID == 16 })   // sigue sin clasificar aunque esté en el subálbum
+    #expect(lone.suggestion == AlbumSuggestion(album: "Andorra 2025", confidence: .between))
+    #expect(unfiled.first { $0.imageID == 17 }?.suggestion == nil)   // duplicado por nombre: no se propone
 }

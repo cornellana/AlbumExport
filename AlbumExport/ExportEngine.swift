@@ -424,20 +424,31 @@ actor CatalogWorker {
         CatalogVerifier.restore(missing)
     }
 
-    /// Crea (o completa) en Capture One un álbum con las fotos sin clasificar que no sean
-    /// duplicados de fotos ya clasificadas. Devuelve cuántas se añadieron.
-    func createUnfiledAlbum(named name: String, images: [UnfiledImage]) throws -> Int {
+    /// Crea (o completa) en Capture One el grupo de fotos sin clasificar, con un subálbum por
+    /// cada álbum probable y otro para las que no encajan en ninguno. No incluye los duplicados
+    /// de fotos ya clasificadas ni repite las que un subálbum ya contiene.
+    /// - Parameters:
+    ///   - group: nombre del grupo ("Sin clasificar").
+    ///   - fallbackAlbum: subálbum para las fotos sin álbum probable.
+    /// - Returns: fotos añadidas y subálbumes usados.
+    func createUnfiledAlbums(group: String, fallbackAlbum: String, images: [UnfiledImage]) throws -> (added: Int, albums: Int) {
         let driver = CaptureOneDriver()
         try driver.launch()
         try driver.openCatalog(reader.rootURL)
         let document = CaptureOneDriver.documentName(for: reader.rootURL)
-        let existing = Set(try driver.ensureAlbum(document: document, path: [name]).map { $0.lowercased() })
-        let toAdd = images.filter { $0.duplicateInAlbum == nil && !existing.contains(($0.filename as NSString).deletingPathExtension.lowercased()) }
-        let variantIDs = try reader.variantIDs(forImages: toAdd.map(\.imageID))
-        for chunk in stride(from: 0, to: variantIDs.count, by: 200).map({ Array(variantIDs[$0..<min($0 + 200, variantIDs.count)]) }) {
-            try driver.addToAlbum(document: document, path: [name], variantIDs: chunk)
+        let byAlbum = Dictionary(grouping: images.filter { $0.duplicateInAlbum == nil }) { $0.suggestion?.album ?? fallbackAlbum }
+        var added = 0
+        for (album, photos) in byAlbum.sorted(by: { $0.key < $1.key }) {
+            let path = [group, album]
+            let existing = Set(try driver.ensureAlbum(document: document, path: path).map { $0.lowercased() })
+            let toAdd = photos.filter { !existing.contains(($0.filename as NSString).deletingPathExtension.lowercased()) }
+            let variantIDs = try reader.variantIDs(forImages: toAdd.map(\.imageID))
+            for chunk in stride(from: 0, to: variantIDs.count, by: 200).map({ Array(variantIDs[$0..<min($0 + 200, variantIDs.count)]) }) {
+                try driver.addToAlbum(document: document, path: path, variantIDs: chunk)
+            }
+            added += toAdd.count
         }
-        return toAdd.count
+        return (added, byAlbum.count)
     }
 
     func transfer(plan: ExportPlan, destinationCatalog: URL, cancellation: CancellationToken,

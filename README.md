@@ -111,7 +111,16 @@ El botón **Verify** compara la carpeta `Originals/` del bundle con el índice:
   cámara repetido) tiene otra hora de captura y se descarta.
 - La búsqueda recorre todas las subcarpetas, entra en otros catálogos y al terminar indica
   cuántos ficheros y carpetas ha revisado y cuántas carpetas no pudo leer.
-- **Sin álbum**: imágenes indexadas que no pertenecen a ningún álbum de usuario (informativo).
+- **Sin álbum**: imágenes indexadas que no pertenecen a ningún álbum de usuario. Las que comparten
+  nombre con una foto ya clasificada se tratan como duplicados. Para el resto se deduce el
+  **álbum probable**: si la foto anterior y la siguiente por hora de captura (a menos de 24 h)
+  están en un mismo álbum, es ese; en la frontera entre dos álbumes decide la secuencia del
+  nombre (`_AM21178`, `_AM21179`…) y después la cercanía en el tiempo (marcado con `≈`). Si
+  varias opciones valen, gana el álbum de intervalo de captura más corto (la sesión, no una
+  recopilación). *Create "Sin clasificar" group…* crea en Capture One, tras confirmar, el grupo
+  **Sin clasificar** con un subálbum por cada álbum probable y **Sin álbum probable** para el
+  resto. No mueve ni borra nada, se puede repetir sin duplicar, y esos subálbumes no cuentan
+  como álbum: la foto sigue en la lista hasta que se arrastre a un álbum de verdad.
 
 *Move orphans to folder…* saca los huérfanos del bundle a la carpeta elegida conservando
 la estructura `Originals/AAAA/MM/DD/HHMM/`, para poder reimportarlos, y deja un CSV

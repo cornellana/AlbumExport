@@ -39,6 +39,10 @@ struct UnfiledImage: Identifiable, Hashable, Sendable {
     let path: String
     /// Álbum que ya contiene otra foto con el mismo nombre de fichero: probable duplicado.
     let duplicateInAlbum: String?
+    /// Fecha de captura registrada en el índice (`ZEXP_DATE`).
+    var captureDate: Date? = nil
+    /// Álbum al que probablemente pertenece, por hora de captura y secuencia del nombre.
+    var suggestion: AlbumSuggestion? = nil
     var id: Int { imageID }
 }
 
@@ -69,6 +73,10 @@ struct VerifyResult: Sendable {
     /// Sin álbum y sin otra foto del mismo nombre ya clasificada: candidatas al álbum "Sin clasificar".
     var unfiledToFile: [UnfiledImage] { unfiled.filter { $0.duplicateInAlbum == nil } }
     var unfiledDuplicates: Int { unfiled.count - unfiledToFile.count }
+    /// Candidatas para las que se ha deducido un álbum probable.
+    var unfiledWithSuggestion: Int { unfiledToFile.filter { $0.suggestion != nil }.count }
+    /// Álbumes distintos propuestos.
+    var suggestedAlbumCount: Int { Set(unfiledToFile.compactMap { $0.suggestion?.album }).count }
 }
 
 /// Compara los ficheros de `Originals/` con el índice del catálogo.
@@ -361,7 +369,7 @@ enum CatalogVerifier {
         var lines = ["kind,path,size,found_at_or_album"]
         for o in result.orphans { lines.append([cell("orphan"), cell(o.relativePath), String(o.size), ""].joined(separator: ",")) }
         for m in result.missing { lines.append([cell("missing"), cell(m.expectedPath), m.size.map(String.init) ?? "", cell(m.candidate?.path ?? "")].joined(separator: ",")) }
-        for u in result.unfiled { lines.append([cell(u.duplicateInAlbum == nil ? "not_in_album" : "not_in_album_duplicate"), cell(u.path), "", cell(u.duplicateInAlbum ?? "")].joined(separator: ",")) }
+        for u in result.unfiled { lines.append([cell(u.duplicateInAlbum == nil ? "not_in_album" : "not_in_album_duplicate"), cell(u.path), "", cell(u.duplicateInAlbum ?? u.suggestion?.album ?? "")].joined(separator: ",")) }
         try lines.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
     }
 }
