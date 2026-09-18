@@ -622,11 +622,13 @@ final class ExportViewModel {
     /// Nombre del grupo que reúne las fotos sin clasificar (debe figurar en `CatalogReader.unfiledGroupNames`).
     static var unfiledAlbumName: String { String(localized: "Unfiled", comment: "Nombre del grupo de fotos sin clasificar") }
     /// Subálbum para las fotos a las que no se les ha encontrado álbum probable.
+    /// Subálbum para las copias repetidas de fotos que ya están en un álbum.
+    static var unfiledDuplicatesAlbumName: String { String(localized: "Duplicates", comment: "Subálbum de copias repetidas de fotos ya clasificadas") }
     static var unfiledFallbackAlbumName: String { String(localized: "No probable album", comment: "Subálbum de fotos sin álbum probable") }
 
     /// Solo a petición del usuario y tras confirmar: nunca se crea automáticamente.
     func requestUnfiledAlbum() {
-        guard verifyResult?.unfiledToFile.isEmpty == false else { return }
+        guard verifyResult?.unfiled.isEmpty == false else { return }
         showUnfiledAlbumConfirmation = true
     }
 
@@ -637,7 +639,7 @@ final class ExportViewModel {
         verifyProgress = String(localized: "Creating the albums in Capture One…", comment: "Progreso de verificación")
         Task {
             do {
-                let done = try await worker.createUnfiledAlbums(group: Self.unfiledAlbumName, fallbackAlbum: Self.unfiledFallbackAlbumName, images: result.unfiled)
+                let done = try await worker.createUnfiledAlbums(group: Self.unfiledAlbumName, fallbackAlbum: Self.unfiledFallbackAlbumName, duplicatesAlbum: Self.unfiledDuplicatesAlbumName, images: result.unfiled)
                 verifyMessage = String(localized: "Group \"\(Self.unfiledAlbumName)\": \(done.added) photos added to \(done.albums) albums.", comment: "Resumen tras crear el grupo de sin clasificar")
                 if done.failed > 0 {
                     errorMessage = String(localized: "Capture One did not add \(done.failed) photos. Press the button again to retry.", comment: "Aviso tras crear el grupo de sin clasificar")

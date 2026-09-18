@@ -497,18 +497,18 @@
         }
       }
     },
-    "Capture One will open the catalog and create that group with one album per probable album, plus \"%@\" for the rest. Photos whose file name is already in another album are skipped. Nothing is removed or moved.": {
+    "Capture One will open the catalog and create that group with one album per probable album, \"%@\" for the rest and \"%@\" for repeated copies of photos already in an album. Nothing is removed or moved.": {
       "localizations": {
         "ca": {
           "stringUnit": {
             "state": "translated",
-            "value": "Capture One obrirà el catàleg i crearà aquest grup amb un àlbum per cada àlbum probable, més \"%@\" per a la resta. Les fotos amb un nom de fitxer que ja és en un altre àlbum s'ometen. No s'esborra ni es mou res."
+            "value": "Capture One obrirà el catàleg i crearà aquest grup amb un àlbum per cada àlbum probable, \"%1$@\" per a la resta i \"%2$@\" per a les còpies repetides de fotos que ja són en un àlbum. No s'esborra ni es mou res."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Capture One abrirá el catálogo y creará ese grupo con un álbum por cada álbum probable, más \"%@\" para el resto. Las fotos cuyo nombre de fichero ya está en otro álbum se omiten. No se borra ni se mueve nada."
+            "value": "Capture One abrirá el catálogo y creará ese grupo con un álbum por cada álbum probable, \"%1$@\" para el resto y \"%2$@\" para las copias repetidas de fotos que ya están en un álbum. No se borra ni se mueve nada."
           }
         }
       }
@@ -1053,6 +1053,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Correcta (sin metadatos)"
+          }
+        }
+      }
+    },
+    "Duplicate of a photo in album": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duplicat d'una foto de l'àlbum"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duplicado de una foto del álbum"
+          }
+        }
+      }
+    },
+    "Duplicates": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duplicats"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duplicados"
           }
         }
       }
@@ -2369,18 +2401,18 @@
         }
       }
     },
-    "Photos in the index but in no user album. %lld share their file name with a photo already in an album and are treated as duplicates: they are not added. A probable album was found for %lld of the rest, from capture time and file name sequence (%lld albums).": {
+    "Photos in the index but in no user album. %lld are repeated copies (same file name and capture time) of a photo already in an album: they go to the album \"%@\". A probable album was found for %lld of the rest, from capture time and file name sequence (%lld albums).": {
       "localizations": {
         "ca": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fotos a l'índex que no són en cap àlbum d'usuari. %1$lld comparteixen nom de fitxer amb una foto que ja és en un àlbum i es tracten com a duplicats: no s'afegeixen. S'ha trobat àlbum probable per a %2$lld de la resta, per hora de captura i seqüència del nom (%3$lld àlbums)."
+            "value": "Fotos a l'índex que no són en cap àlbum d'usuari. %1$lld són còpies repetides (mateix nom de fitxer i hora de captura) d'una foto que ja és en un àlbum: van a l'àlbum \"%2$@\". S'ha trobat àlbum probable per a %3$lld de la resta, per hora de captura i seqüència del nom (%4$lld àlbums)."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fotos en el índice que no están en ningún álbum de usuario. %1$lld comparten nombre de fichero con una foto que ya está en un álbum y se tratan como duplicados: no se añaden. Se ha encontrado álbum probable para %2$lld del resto, por hora de captura y secuencia del nombre (%3$lld álbumes)."
+            "value": "Fotos en el índice que no están en ningún álbum de usuario. %1$lld son copias repetidas (mismo nombre de fichero y hora de captura) de una foto que ya está en un álbum: van al álbum \"%2$@\". Se ha encontrado álbum probable para %3$lld del resto, por hora de captura y secuencia del nombre (%4$lld álbumes)."
           }
         }
       }
@@ -2701,22 +2733,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Error de SQLite: %@"
-          }
-        }
-      }
-    },
-    "Same name already in album": {
-      "localizations": {
-        "ca": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mateix nom ja en àlbum"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mismo nombre ya en álbum"
           }
         }
       }

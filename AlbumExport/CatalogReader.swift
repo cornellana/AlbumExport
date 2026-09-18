@@ -404,14 +404,30 @@ final class CatalogReader: @unchecked Sendable {
         let locationByID = Dictionary(locations.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         // Nombre de fichero (minúsculas) -> primer álbum de usuario que contiene una foto con ese nombre.
         var filedNames: [String: String] = [:]
+        var filedDates: [String: Set<Date?>] = [:]
         var albumNames: [Int: String] = [:]
         var albumsByImage: [Int: Set<Int>] = [:]
-        for row in try db.query("SELECT m.image AS image, m.albumID AS albumID, m.album AS album FROM (\(referenceMembership)) m ORDER BY m.album") {
+        // Una copia clasificada que está en la papelera no sirve de referencia: si se vacía, la
+        // que quedaría sin álbum sería la única.
+        for row in try db.query("""
+            SELECT m.image AS image, m.albumID AS albumID, m.album AS album FROM (\(referenceMembership)) m
+            JOIN ZIMAGE i ON i.Z_PK = m.image WHERE 1 = 1 \(trashed) ORDER BY m.album
+            """) {
             guard let image = row.int("image"), let albumID = row.int("albumID"), let album = row.string("album"),
                   let loc = locationByID[image] else { continue }
             albumNames[albumID] = album
             albumsByImage[image, default: []].insert(albumID)
             if filedNames[loc.filename.lowercased()] == nil { filedNames[loc.filename.lowercased()] = album }
+            filedDates[loc.filename.lowercased(), default: []].insert(loc.captureDate)
+        }
+        // Duplicado = mismo nombre y misma hora de captura que una foto ya clasificada. El nombre
+        // solo no basta: el contador de la cámara da la vuelta y repite nombres en fotos distintas.
+        // Sin fecha en alguno de los dos lados, decide el nombre.
+        func duplicateAlbum(_ loc: ImageLocation) -> String? {
+            let name = loc.filename.lowercased()
+            guard let album = filedNames[name], let dates = filedDates[name] else { return nil }
+            guard let date = loc.captureDate else { return album }
+            return dates.contains(date) || dates.contains(nil) ? album : nil
         }
         // Intervalo de captura de cada álbum y fotos clasificadas con fecha, para proponer álbum.
         var ranges: [Int: (first: Date, last: Date)] = [:]
@@ -430,11 +446,11 @@ final class CatalogReader: @unchecked Sendable {
         }
         let unfiled = locations.filter { ids.contains($0.id) }
         let suggestions = AlbumSuggester.suggest(
-            for: unfiled.filter { filedNames[$0.filename.lowercased()] == nil }.map { ($0.id, $0.filename, $0.captureDate) },
+            for: unfiled.filter { duplicateAlbum($0) == nil }.map { ($0.id, $0.filename, $0.captureDate) },
             filed: filed, albums: albums)
         return unfiled
             .map { UnfiledImage(imageID: $0.id, filename: $0.filename, path: expectedURL($0)?.path ?? "?",
-                                duplicateInAlbum: filedNames[$0.filename.lowercased()],
+                                duplicateInAlbum: duplicateAlbum($0),
                                 captureDate: $0.captureDate, suggestion: suggestions[$0.id]) }
             .sorted { $0.path < $1.path }
     }

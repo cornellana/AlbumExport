@@ -105,7 +105,7 @@ struct VerifyView: View {
                                 // "≈": solo una foto vecina está en ese álbum (menos seguro).
                                 Text(verbatim: item.suggestion.map { ($0.confidence == .nearby ? "≈ " : "") + $0.album } ?? "")
                             }.width(200)
-                            TableColumn("Same name already in album") { item in
+                            TableColumn("Duplicate of a photo in album") { item in
                                 Text(verbatim: item.duplicateInAlbum ?? "")
                                     .foregroundStyle(.orange)
                             }.width(200)
@@ -113,8 +113,8 @@ struct VerifyView: View {
                     }
                     HStack {
                         Button("Create \"\(ExportViewModel.unfiledAlbumName)\" group in Capture One") { model.requestUnfiledAlbum() }
-                            .disabled(result.unfiledToFile.isEmpty)
-                        Text("Photos in the index but in no user album. \(result.unfiledDuplicates) share their file name with a photo already in an album and are treated as duplicates: they are not added. A probable album was found for \(result.unfiledWithSuggestion) of the rest, from capture time and file name sequence (\(result.suggestedAlbumCount) albums).")
+                            .disabled(result.unfiled.isEmpty)
+                        Text("Photos in the index but in no user album. \(result.unfiledDuplicates) are repeated copies (same file name and capture time) of a photo already in an album: they go to the album \"\(ExportViewModel.unfiledDuplicatesAlbumName)\". A probable album was found for \(result.unfiledWithSuggestion) of the rest, from capture time and file name sequence (\(result.suggestedAlbumCount) albums).")
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 }
@@ -139,12 +139,12 @@ struct VerifyView: View {
         } message: {
             Text("They will be moved to \(model.orphanTargetFolder?.path ?? "") keeping their folder structure, so they can be imported again.")
         }
-        .confirmationDialog("Add \(model.verifyResult?.unfiledToFile.count ?? 0) photos to the group \"\(ExportViewModel.unfiledAlbumName)\"?",
+        .confirmationDialog("Add \(model.verifyResult?.unfiled.count ?? 0) photos to the group \"\(ExportViewModel.unfiledAlbumName)\"?",
                             isPresented: $model.showUnfiledAlbumConfirmation, titleVisibility: .visible) {
             Button("Create albums") { model.createUnfiledAlbum() }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Capture One will open the catalog and create that group with one album per probable album, plus \"\(ExportViewModel.unfiledFallbackAlbumName)\" for the rest. Photos whose file name is already in another album are skipped. Nothing is removed or moved.")
+            Text("Capture One will open the catalog and create that group with one album per probable album, \"\(ExportViewModel.unfiledFallbackAlbumName)\" for the rest and \"\(ExportViewModel.unfiledDuplicatesAlbumName)\" for repeated copies of photos already in an album. Nothing is removed or moved.")
         }
         .confirmationDialog("Restore \(model.verifyResult?.foundCount ?? 0) found files into the catalog?",
                             isPresented: $model.showRestoreConfirmation, titleVisibility: .visible) {

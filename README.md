@@ -111,15 +111,16 @@ El botón **Verify** compara la carpeta `Originals/` del bundle con el índice:
   cámara repetido) tiene otra hora de captura y se descarta.
 - La búsqueda recorre todas las subcarpetas, entra en otros catálogos y al terminar indica
   cuántos ficheros y carpetas ha revisado y cuántas carpetas no pudo leer.
-- **Sin álbum**: imágenes indexadas que no pertenecen a ningún álbum de usuario. Las que comparten
-  nombre con una foto ya clasificada se tratan como duplicados. Para el resto se deduce el
-  **álbum probable**: si la foto anterior y la siguiente por hora de captura (a menos de 24 h)
-  están en un mismo álbum, es ese; en la frontera entre dos álbumes decide la secuencia del
+- **Sin álbum**: imágenes indexadas que no pertenecen a ningún álbum de usuario. Las que tienen
+  el mismo nombre **y la misma hora de captura** que una foto ya clasificada son duplicados
+  (importaciones repetidas). Para el resto se deduce el **álbum probable**: si la foto anterior
+  y la siguiente por hora de captura (a menos de 24 h) están en un mismo álbum, es ese; en la
+  frontera entre dos álbumes decide la secuencia del
   nombre (`_AM21178`, `_AM21179`…) y después la cercanía en el tiempo (marcado con `≈`). Si
   varias opciones valen, gana el álbum de intervalo de captura más corto (la sesión, no una
   recopilación). *Create "Sin clasificar" group…* crea en Capture One, tras confirmar, el grupo
-  **Sin clasificar** con un subálbum por cada álbum probable y **Sin álbum probable** para el
-  resto. No mueve ni borra nada y se puede repetir sin duplicar. Esos subálbumes cuentan como
+  **Sin clasificar** con un subálbum por cada álbum probable, **Sin álbum probable** para el
+  resto y **Duplicados** para las copias repetidas. No mueve ni borra nada y se puede repetir sin duplicar. Esos subálbumes cuentan como
   álbum (la foto deja de figurar como "sin álbum"); pasarlas al álbum definitivo o borrarlas
   es un proceso aparte. No se usan como referencia para proponer álbum a otras fotos.
 

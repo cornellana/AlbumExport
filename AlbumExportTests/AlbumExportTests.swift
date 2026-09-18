@@ -640,6 +640,14 @@ struct FixtureCatalog {
     #expect(before.first { $0.imageID == 16 }?.suggestion == AlbumSuggestion(album: "Andorra 2025", confidence: .between))
     #expect(before.first { $0.imageID == 17 }?.suggestion == nil)   // duplicado por nombre: no se propone
 
+    // Mismo nombre pero otra hora de captura (contador de cámara repetido): no es un duplicado.
+    try db.execute("UPDATE ZIMAGE SET ZEXP_DATE = 1700000900 WHERE Z_PK = 17;")
+    let rollover = try #require(try CatalogReader(url: fixture.bundle).imagesNotInAnyAlbum().first { $0.imageID == 17 })
+    #expect(rollover.duplicateInAlbum == nil)
+    #expect(rollover.suggestion?.album == "Andorra 2025")
+    try db.execute("UPDATE ZIMAGE SET ZEXP_DATE = 1700001200 WHERE Z_PK = 17;")   // misma hora que IMG_0002.jpg: duplicado
+    #expect(try CatalogReader(url: fixture.bundle).imagesNotInAnyAlbum().first { $0.imageID == 17 }?.duplicateInAlbum == "Andorra 2025")
+
     // Tras crear el grupo: LONE.jpg queda recogida; una foto nueva junto a ella no hereda "Otros".
     try db.execute("""
         INSERT INTO ZCOLLECTION VALUES (7,20,'Sin clasificar',1),(2,21,'Otros',20);

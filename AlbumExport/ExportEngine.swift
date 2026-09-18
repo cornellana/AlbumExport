@@ -425,24 +425,26 @@ actor CatalogWorker {
     }
 
     /// Crea (o completa) en Capture One el grupo de fotos sin clasificar, con un subálbum por
-    /// cada álbum probable y otro para las que no encajan en ninguno. No incluye los duplicados
-    /// de fotos ya clasificadas ni repite las que un subálbum ya contiene.
+    /// cada álbum probable, otro para las que no encajan en ninguno y otro para los duplicados
+    /// de fotos ya clasificadas.
     /// - Parameters:
     ///   - group: nombre del grupo ("Sin clasificar").
     ///   - fallbackAlbum: subálbum para las fotos sin álbum probable.
+    ///   - duplicatesAlbum: subálbum para las copias repetidas de fotos que ya están en un álbum.
     /// - Returns: variantes añadidas de verdad (contadas en Capture One), las que no entraron y subálbumes usados.
-    func createUnfiledAlbums(group: String, fallbackAlbum: String, images: [UnfiledImage]) throws -> (added: Int, failed: Int, albums: Int) {
+    func createUnfiledAlbums(group: String, fallbackAlbum: String, duplicatesAlbum: String, images: [UnfiledImage]) throws -> (added: Int, failed: Int, albums: Int) {
         let driver = CaptureOneDriver()
         try driver.launch()
         try driver.openCatalog(reader.rootURL)
         let document = CaptureOneDriver.documentName(for: reader.rootURL)
-        let byAlbum = Dictionary(grouping: images.filter { $0.duplicateInAlbum == nil }) { $0.suggestion?.album ?? fallbackAlbum }
+        let byAlbum = Dictionary(grouping: images) { $0.duplicateInAlbum != nil ? duplicatesAlbum : ($0.suggestion?.album ?? fallbackAlbum) }
         var added = 0, expected = 0
         for (album, photos) in byAlbum.sorted(by: { $0.key < $1.key }) {
             let path = [group, album]
-            let existing = Set(try driver.ensureAlbum(document: document, path: path).map { $0.lowercased() })
-            let toAdd = photos.filter { !existing.contains(($0.filename as NSString).deletingPathExtension.lowercased()) }
-            let variantIDs = try reader.variantIDs(forImages: toAdd.map(\.imageID))
+            // No se filtra por nombre contra lo que el subálbum ya tiene: varias copias importadas
+            // de una foto comparten nombre, y lo que llega aquí no está en ningún álbum.
+            _ = try driver.ensureAlbum(document: document, path: path)
+            let variantIDs = try reader.variantIDs(forImages: photos.map(\.imageID))
             // Capture One puede no añadir nada sin dar error (visto con 100 fotos de golpe): se
             // cuenta lo que el álbum contiene de verdad y, si falta, se reintenta en tandas pequeñas.
             let before = try driver.variantCount(document: document, path: path)
