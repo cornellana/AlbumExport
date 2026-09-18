@@ -442,7 +442,20 @@ final class ExportViewModel {
 
     // MARK: - Verificación del catálogo
 
-    private(set) var verifyResult: VerifyResult?
+    private(set) var verifyResult: VerifyResult? {
+        didSet { catalogOpenInCaptureOne = Self.isOpenInCaptureOne(catalogURL) }
+    }
+    /// Capture One tenía abierto el catálogo al verificar. Capture One guarda sus cambios en disco
+    /// con retraso: una foto recién borrada allí (y su fichero) puede seguir en el índice que lee
+    /// esta app y parecer "perdida". Restaurar o borrar ficheros en ese estado es engañoso, así
+    /// que esas acciones se bloquean hasta verificar con el catálogo cerrado.
+    private(set) var catalogOpenInCaptureOne = false
+
+    /// Capture One en marcha y fichero `writelock` presente en el bundle del catálogo.
+    static func isOpenInCaptureOne(_ catalog: URL?) -> Bool {
+        guard let catalog, FileManager.default.fileExists(atPath: catalog.appendingPathComponent("writelock").path) else { return false }
+        return NSWorkspace.shared.runningApplications.contains { $0.bundleIdentifier?.hasPrefix("com.captureone.captureone") == true }
+    }
     private(set) var isVerifying = false
     private(set) var verifyProgress = ""
     /// Búsqueda de perdidos en curso: la tabla sigue visible y se va rellenando.

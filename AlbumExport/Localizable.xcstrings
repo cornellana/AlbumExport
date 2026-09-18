@@ -513,6 +513,22 @@
         }
       }
     },
+    "Capture One has this catalog open and saves its changes to disk with a delay: photos you just deleted there can show up here as missing. Restoring, removing and moving files are disabled. Close the catalog in Capture One and press Verify again.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El Capture One té obert aquest catàleg i desa els canvis al disc amb retard: les fotos que acabes d'esborrar allà poden sortir aquí com a perdudes. Restaurar, eliminar i moure fitxers està desactivat. Tanca el catàleg al Capture One i prem Verifica de nou."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture One tiene abierto este catálogo y guarda sus cambios en disco con retraso: las fotos que acabas de borrar allí pueden salir aquí como perdidas. Restaurar, eliminar y mover ficheros está desactivado. Cierra el catálogo en Capture One y pulsa Verificar de nuevo."
+          }
+        }
+      }
+    },
     "Capture One is not installed.": {
       "localizations": {
         "ca": {

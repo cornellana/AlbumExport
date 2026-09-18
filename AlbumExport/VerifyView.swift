@@ -28,6 +28,11 @@ struct VerifyView: View {
                 Spacer()
             } else if let result = model.verifyResult {
                 summary(result)
+                if model.catalogOpenInCaptureOne {
+                    Label("Capture One has this catalog open and saves its changes to disk with a delay: photos you just deleted there can show up here as missing. Restoring, removing and moving files are disabled. Close the catalog in Capture One and press Verify again.",
+                          systemImage: "exclamationmark.triangle.fill")
+                        .font(.callout).foregroundStyle(.orange)
+                }
                 Picker("", selection: $tab) {
                     Text("Orphan files").tag(Tab.orphans)
                     Text("Missing files").tag(Tab.missing)
@@ -66,9 +71,9 @@ struct VerifyView: View {
                     }
                     HStack {
                         Button("Move orphans to folder…") { model.chooseOrphanFolder() }
-                            .disabled(result.orphans.isEmpty)
+                            .disabled(result.orphans.isEmpty || model.catalogOpenInCaptureOne)
                         Button("Remove the \(result.spareOrphans.count) spare copies (\(result.spareBytes.formatted(.byteCount(style: .file))))…") { model.requestRemoveSpareOrphans() }
-                            .disabled(result.spareOrphans.isEmpty)
+                            .disabled(result.spareOrphans.isEmpty || model.catalogOpenInCaptureOne)
                             .help("Spare copy: an orphan whose photo (same file name and capture time) is in the catalog, alive and with its file on disk, or that repeats another orphan. Copies reserved to restore a missing file are excluded.")
                         Button("Import the \(result.recoverableOrphans.count) photos not in the catalog…") { model.requestRecoverOrphans() }
                             .disabled(result.recoverableOrphans.isEmpty)
@@ -119,7 +124,7 @@ struct VerifyView: View {
                         .fixedSize()
                         .disabled(result.missing.isEmpty || model.isSearching)
                         Button("Restore found files into the catalog") { model.requestRestore() }
-                            .disabled(result.foundCount == 0 || model.isSearching)
+                            .disabled(result.foundCount == 0 || model.isSearching || model.catalogOpenInCaptureOne)
                         Text("Orphans inside the catalog are matched first (name and size) and restoring moves them into place; files found elsewhere are copied. Entries already indexed under another path are duplicate imports.")
                             .font(.caption).foregroundStyle(.secondary)
                     }

@@ -522,6 +522,8 @@ struct FixtureCatalog {
     print("VERIFY-REAL orphanCopies=\(result.orphanCopies) recoverable=\(result.recoverableOrphans.count) withAlbum=\(result.recoverableOrphans.filter { $0.suggestion != nil }.count) notPhoto=\(result.orphans.filter { !$0.isImportable }.count) spare=\(result.spareOrphans.count) spareBytes=\(result.spareBytes) unsoundTwins=\(result.spareOrphans.filter { !CatalogVerifier.twinIsSound($0.twinPath ?? "", for: $0) }.count)")
     print("VERIFY-REAL toFile=\(result.unfiledToFile.count) suggested=\(result.unfiledWithSuggestion) albums=\(result.suggestedAlbumCount) nearby=\(result.unfiledToFile.filter { $0.suggestion?.confidence == .nearby }.count)")
     for o in result.orphans.prefix(5) { print("VERIFY-REAL orphan \(o.relativePath) \(o.size)") }
+    let byFolder = Dictionary(grouping: result.missing) { ($0.expectedPath as NSString).deletingLastPathComponent }
+    for (folder, items) in byFolder.sorted(by: { $0.value.count > $1.value.count }).prefix(12) { print("VERIFY-REAL missingFolder \(items.count) \(folder) cand=\(items.filter { $0.candidate != nil }.count) alsoIndexed=\(items.filter { $0.alsoIndexedAt != nil }.count)") }
     for m in result.missing.prefix(5) { print("VERIFY-REAL missing \(m.expectedPath) -> \(m.candidate?.path ?? "-")") }
     #expect(result.filesOnDisk > 0)
 }
