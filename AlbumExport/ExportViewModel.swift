@@ -625,6 +625,31 @@ final class ExportViewModel {
 
     var showUnfiledAlbumConfirmation = false
     var showRecoverOrphansConfirmation = false
+    var showRemoveSpareConfirmation = false
+
+    /// Solo a petición del usuario y tras confirmar: borra ficheros del bundle del catálogo.
+    func requestRemoveSpareOrphans() {
+        guard verifyResult?.spareOrphans.isEmpty == false else { return }
+        showRemoveSpareConfirmation = true
+    }
+
+    /// Elimina las copias huérfanas sobrantes: a la Papelera del Mac o definitivamente.
+    func removeSpareOrphans(permanently: Bool) {
+        guard let worker, let result = verifyResult else { return }
+        let spare = result.spareOrphans
+        isVerifying = true
+        verifyProgress = String(localized: "Removing spare copies…", comment: "Progreso de verificación")
+        Task {
+            let errors = await worker.removeSpareOrphans(spare, permanently: permanently)
+            let bytes = spare.filter { errors[$0.relativePath] == nil }.reduce(Int64(0)) { $0 + $1.size }
+            verifyMessage = String(localized: "\(spare.count - errors.count) spare copies removed (\(bytes.formatted(.byteCount(style: .file)))).", comment: "Resumen tras eliminar huérfanos sobrantes")
+            if let first = errors.first {
+                errorMessage = String(localized: "\(errors.count) files could not be removed (e.g. \(first.key): \(first.value))", comment: "Aviso tras eliminar huérfanos sobrantes")
+            }
+            if let refreshed = try? await worker.verify() { verifyResult = refreshed }
+            isVerifying = false
+        }
+    }
 
     /// Grupo donde se recogen los huérfanos importados (debe figurar en `CatalogReader.generatedGroupNames`).
     static var recoveredGroupName: String { String(localized: "Recovered orphans", comment: "Nombre del grupo de huérfanos importados") }

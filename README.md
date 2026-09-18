@@ -104,6 +104,11 @@ El botón **Verify** compara la carpeta `Originals/` del bundle con el índice:
   reparte en el grupo **Huérfanos recuperados**, con un subálbum por álbum probable. Los
   ficheros huérfanos no se tocan: se importa un clon desde una carpeta temporal y, después, el
   huérfano pasa a ser una copia sobrante más.
+  *Remove the N spare copies…* elimina, tras confirmar, las copias sobrantes: a la **Papelera
+  del Mac** (recuperable) o **definitivamente**. Solo cuenta como sobrante el huérfano cuya foto
+  indexada está viva (no en la papelera de Capture One) y con su fichero en disco, o el que
+  repite a otro huérfano; se excluyen los reservados para restaurar un perdido, y justo antes
+  de borrar cada fichero se comprueba que la otra copia sigue ahí y no está truncada.
 - **Ausentes**: imágenes del índice cuyo fichero no existe donde el catálogo espera
   (offline), tanto dentro del bundle como en rutas externas. Primero se cruzan con los
   huérfanos del propio bundle (nombre y tamaño): si coinciden, *Restore* los mueve a su

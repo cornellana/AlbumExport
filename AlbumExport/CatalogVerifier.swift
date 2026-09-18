@@ -15,6 +15,11 @@ struct OrphanFile: Identifiable, Hashable, Sendable {
     var indexedAlbum: String? = nil
     /// Otra copia huérfana de una foto nueva que ya figura antes en la lista.
     var repeatedOrphan = false
+    /// Fichero que hace sobrar a este: el de la foto indexada (viva y con fichero presente) o el
+    /// del primer huérfano con la misma foto. `nil` = no se puede borrar sin riesgo.
+    var twinPath: String? = nil
+    /// Copia sobrante que se puede eliminar: existe otro fichero con la misma foto.
+    var isSpare: Bool { (copyOfIndexed || repeatedOrphan) && twinPath != nil }
     /// Álbum al que probablemente pertenece una foto que no está en el catálogo.
     var suggestion: AlbumSuggestion? = nil
     var id: String { relativePath }
@@ -88,6 +93,12 @@ struct VerifyResult: Sendable {
     /// Huérfanos que son fotos ausentes del catálogo (una por foto): candidatos a importar.
     var recoverableOrphans: [OrphanFile] { orphans.filter(\.isRecoverable) }
     var orphanCopies: Int { orphans.filter { $0.copyOfIndexed || $0.repeatedOrphan }.count }
+    /// Copias sobrantes que se pueden eliminar sin riesgo, salvo las reservadas para restaurar un perdido.
+    var spareOrphans: [OrphanFile] {
+        let reserved = Set(missing.compactMap { $0.candidateIsOrphan ? $0.candidate?.standardizedFileURL.path : nil })
+        return orphans.filter { $0.isSpare && !reserved.contains($0.url.standardizedFileURL.path) }
+    }
+    var spareBytes: Int64 { spareOrphans.reduce(0) { $0 + $1.size } }
     var foundCount: Int { missing.filter { $0.candidate != nil }.count }
     /// Sin álbum y sin otra foto del mismo nombre ya clasificada: candidatas al álbum "Sin clasificar".
     var unfiledToFile: [UnfiledImage] { unfiled.filter { $0.duplicateInAlbum == nil } }
@@ -187,6 +198,34 @@ enum CatalogVerifier {
     }
 
     // MARK: - Huérfanos
+
+    /// La otra copia existe y no es un fichero truncado: mide al menos el 99 % del huérfano (lo
+    /// normal es que mida igual o unos KB más, por los metadatos incrustados al importar).
+    static func twinIsSound(_ twinPath: String, for orphan: OrphanFile) -> Bool {
+        guard let size = (try? FileManager.default.attributesOfItem(atPath: twinPath))?[.size] as? Int64 else { return false }
+        return Double(size) >= Double(orphan.size) * 0.99
+    }
+
+    /// Elimina copias sobrantes: a la Papelera del Mac (recuperable) o definitivamente.
+    /// Justo antes de cada borrado se vuelve a comprobar que el fichero gemelo sigue en disco.
+    /// - Returns: Mensaje de error por ruta relativa; ausencia = eliminado.
+    static func removeSpareOrphans(_ orphans: [OrphanFile], permanently: Bool) -> [String: String] {
+        var errors: [String: String] = [:]
+        for orphan in orphans {
+            guard orphan.isSpare, let twin = orphan.twinPath, twin != orphan.url.path,
+                  twinIsSound(twin, for: orphan) else {
+                errors[orphan.relativePath] = String(localized: "The other copy is no longer on disk: kept", comment: "Error al eliminar un huérfano sobrante")
+                continue
+            }
+            do {
+                if permanently { try FileManager.default.removeItem(at: orphan.url) }
+                else { try FileManager.default.trashItem(at: orphan.url, resultingItemURL: nil) }
+            } catch {
+                errors[orphan.relativePath] = error.localizedDescription
+            }
+        }
+        return errors
+    }
 
     /// Mueve los huérfanos a `folder` conservando su ruta relativa (`Originals/AAAA/MM/...`),
     /// para poder reimportarlos con la misma estructura.

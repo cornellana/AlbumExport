@@ -295,15 +295,17 @@ final class CatalogReader: @unchecked Sendable {
         let path: String?
         let size: Int64?
         let captureDate: Date?
+        var trashed = false
     }
 
     private func allImageLocations() throws -> [ImageLocation] {
         let imageColumns = db.columns(of: "ZIMAGE")
         let hasSize = imageColumns.contains("ZFILE_SIZE")
         let hasDate = imageColumns.contains("ZEXP_DATE")
+        let hasTrashed = imageColumns.contains("ZISTRASHED")
         return try db.query("""
             SELECT i.Z_PK AS pk, i.ZIMAGEFILENAME AS f, \(hasSize ? "i.ZFILE_SIZE" : "NULL") AS size,
-                   \(hasDate ? "i.ZEXP_DATE" : "NULL") AS expdate,
+                   \(hasDate ? "i.ZEXP_DATE" : "NULL") AS expdate, \(hasTrashed ? "IFNULL(i.ZISTRASHED, 0)" : "0") AS trashed,
                    p.ZISRELATIVE AS rel, p.ZMACROOT AS root, p.ZRELATIVEPATH AS path
             FROM ZIMAGE i LEFT JOIN ZPATHLOCATION p ON p.Z_PK = i.ZIMAGELOCATION
             """).compactMap { row in
@@ -312,7 +314,7 @@ final class CatalogReader: @unchecked Sendable {
             let date = (row.values["expdate"] as? Double).map { Date(timeIntervalSince1970: $0.rounded(.down)) }
                 ?? (row.values["expdate"] as? Int64).map { Date(timeIntervalSince1970: Double($0)) }
             return ImageLocation(id: pk, filename: f, relative: row.bool("rel"), root: row.string("root"), path: row.string("path"),
-                                 size: row.int("size").map(Int64.init), captureDate: date)
+                                 size: row.int("size").map(Int64.init), captureDate: date, trashed: row.bool("trashed"))
         }
     }
 
@@ -483,23 +485,33 @@ final class CatalogReader: @unchecked Sendable {
         var indexed: [String: [ImageLocation]] = [:]
         for loc in reference.locations { indexed[loc.filename.lowercased(), default: []].append(loc) }
         var result = orphans
-        var seen: Set<String> = []
+        var firstCopy: [String: String] = [:]   // clave de foto -> ruta del primer huérfano con esa foto
         var candidates: [(id: Int, filename: String, captureDate: Date?)] = []
         for index in result.indices {
             let orphan = result[index]
             let name = orphan.filename.lowercased()
-            let match = indexed[name]?.first { loc in
+            let matches = (indexed[name] ?? []).filter { loc in
                 if let a = orphan.captureDate, let b = loc.captureDate { return a == b }
                 return loc.size == orphan.size
             }
-            if let match {
+            if let match = matches.first {
                 result[index].copyOfIndexed = true
                 result[index].indexedAlbum = reference.duplicateAlbum(filename: match.filename, captureDate: match.captureDate)
+                // Solo sobra de verdad si la foto indexada está viva (no en la papelera) y conserva
+                // su fichero: si no, este huérfano puede ser la única copia que queda.
+                result[index].twinPath = matches.first { loc in
+                    !loc.trashed && (expectedURL(loc).map { FileManager.default.fileExists(atPath: $0.path) } ?? false)
+                }.flatMap { expectedURL($0)?.path }
                 continue
             }
             guard orphan.isImportable else { continue }
             let key = "\(name)|\(orphan.captureDate?.timeIntervalSince1970 ?? -1)|\(orphan.captureDate == nil ? orphan.size : 0)"
-            guard seen.insert(key).inserted else { result[index].repeatedOrphan = true; continue }
+            if let first = firstCopy[key] {
+                result[index].repeatedOrphan = true
+                result[index].twinPath = first
+                continue
+            }
+            firstCopy[key] = orphan.url.path
             candidates.append((index, orphan.filename, orphan.captureDate))
         }
         let suggestions = AlbumSuggester.suggest(for: candidates, filed: reference.filed, albums: reference.albums)

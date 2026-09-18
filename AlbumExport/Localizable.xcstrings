@@ -33,6 +33,22 @@
         }
       }
     },
+    "%lld files could not be removed (e.g. %@: %@)": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld fitxers no s'han pogut eliminar (p. ex. %2$@: %3$@)"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld ficheros no se han podido eliminar (p. ej. %2$@: %3$@)"
+          }
+        }
+      }
+    },
     "%lld of %lld": {
       "localizations": {
         "ca": {
@@ -93,6 +109,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld fotos a mover, %@"
+          }
+        }
+      }
+    },
+    "%lld spare copies removed (%@).": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld còpies sobrants eliminades (%2$@)."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld copias sobrantes eliminadas (%2$@)."
           }
         }
       }
@@ -1009,6 +1041,22 @@
         }
       }
     },
+    "Delete permanently": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elimina definitivament"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminar definitivamente"
+          }
+        }
+      }
+    },
     "Destination": {
       "localizations": {
         "ca": {
@@ -1165,6 +1213,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cada fichero se copia a la ubicación que el catálogo espera. Nunca se sobrescriben ficheros existentes."
+          }
+        }
+      }
+    },
+    "Each of these files is a second copy of a photo whose file is safe elsewhere in the catalog; Capture One does not use them. The Mac Trash lets you recover them until you empty it; deleting permanently frees the space now and cannot be undone. The other copy is checked again just before removing each file.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cadascun d'aquests fitxers és una segona còpia d'una foto que té el fitxer segur en un altre lloc del catàleg; el Capture One no els fa servir. La Paperera del Mac permet recuperar-los fins que la buidis; eliminar definitivament allibera l'espai ara i no es pot desfer. Just abans d'eliminar cada fitxer es torna a comprovar l'altra còpia."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cada uno de estos ficheros es una segunda copia de una foto cuyo fichero está a salvo en otro sitio del catálogo; Capture One no los usa. La Papelera del Mac permite recuperarlos hasta que la vacíes; eliminar definitivamente libera el espacio ya y no se puede deshacer. Justo antes de eliminar cada fichero se vuelve a comprobar la otra copia."
           }
         }
       }
@@ -1965,6 +2029,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "¿Mover los ficheros originales?"
+          }
+        }
+      }
+    },
+    "Move to Trash": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mou a la Paperera"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mover a la Papelera"
           }
         }
       }
@@ -2945,6 +3025,54 @@
         }
       }
     },
+    "Remove %lld spare copies (%@)?": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminar %1$lld còpies sobrants (%2$@)?"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Eliminar %1$lld copias sobrantes (%2$@)?"
+          }
+        }
+      }
+    },
+    "Remove the %lld spare copies (%@)…": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Elimina les %1$lld còpies sobrants (%2$@)…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminar las %1$lld copias sobrantes (%2$@)…"
+          }
+        }
+      }
+    },
+    "Removing spare copies…": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminant còpies sobrants…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eliminando copias sobrantes…"
+          }
+        }
+      }
+    },
     "Repeated copy of another orphan": {
       "localizations": {
         "ca": {
@@ -3297,6 +3425,22 @@
         }
       }
     },
+    "Spare copy: an orphan whose photo (same file name and capture time) is in the catalog, alive and with its file on disk, or that repeats another orphan. Copies reserved to restore a missing file are excluded.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Còpia sobrant: orfe la foto del qual (mateix nom i hora de captura) és al catàleg, viva i amb el fitxer al disc, o que repeteix un altre orfe. S'exclouen les còpies reservades per restaurar un perdut."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copia sobrante: huérfano cuya foto (mismo nombre y hora de captura) está en el catálogo, viva y con su fichero en disco, o que repite a otro huérfano. Se excluyen las copias reservadas para restaurar un perdido."
+          }
+        }
+      }
+    },
     "Spotlight (indexed volumes)": {
       "localizations": {
         "ca": {
@@ -3357,6 +3501,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "El catálogo de destino debe ser distinto del de origen."
+          }
+        }
+      }
+    },
+    "The other copy is no longer on disk: kept": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'altra còpia ja no és al disc: es conserva"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La otra copia ya no está en disco: se conserva"
           }
         }
       }

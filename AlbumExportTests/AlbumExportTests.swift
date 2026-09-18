@@ -519,7 +519,7 @@ struct FixtureCatalog {
     let reader = try CatalogReader(url: url)
     let result = try CatalogVerifier.scan(catalog: reader)
     print("VERIFY-REAL files=\(result.filesOnDisk) referenced=\(result.referenced) orphans=\(result.orphans.count) missing=\(result.missing.count) unfiled=\(result.unfiled.count) matched=\(result.foundCount) seconds=\(Int(Date().timeIntervalSince(start)))")
-    print("VERIFY-REAL orphanCopies=\(result.orphanCopies) recoverable=\(result.recoverableOrphans.count) withAlbum=\(result.recoverableOrphans.filter { $0.suggestion != nil }.count) notPhoto=\(result.orphans.filter { !$0.isImportable }.count)")
+    print("VERIFY-REAL orphanCopies=\(result.orphanCopies) recoverable=\(result.recoverableOrphans.count) withAlbum=\(result.recoverableOrphans.filter { $0.suggestion != nil }.count) notPhoto=\(result.orphans.filter { !$0.isImportable }.count) spare=\(result.spareOrphans.count) spareBytes=\(result.spareBytes) unsoundTwins=\(result.spareOrphans.filter { !CatalogVerifier.twinIsSound($0.twinPath ?? "", for: $0) }.count)")
     print("VERIFY-REAL toFile=\(result.unfiledToFile.count) suggested=\(result.unfiledWithSuggestion) albums=\(result.suggestedAlbumCount) nearby=\(result.unfiledToFile.filter { $0.suggestion?.confidence == .nearby }.count)")
     for o in result.orphans.prefix(5) { print("VERIFY-REAL orphan \(o.relativePath) \(o.size)") }
     for m in result.missing.prefix(5) { print("VERIFY-REAL missing \(m.expectedPath) -> \(m.candidate?.path ?? "-")") }
@@ -688,4 +688,33 @@ struct FixtureCatalog {
     #expect(classified[2].repeatedOrphan && !classified[2].isRecoverable)
     #expect(classified[3].isRecoverable && classified[3].suggestion == nil)
     #expect(!classified[4].isImportable && !classified[4].isRecoverable)
+    // Sobra solo lo que tiene otra copia localizada: la foto indexada con su fichero, o el primer huérfano.
+    #expect(classified[0].isSpare && classified[0].twinPath?.hasSuffix("Originals/2026/01/01/1/IMG_0001.jpg") == true)
+    #expect(classified[2].isSpare && classified[2].twinPath == classified[1].url.path)
+    #expect(!classified[1].isSpare && !classified[3].isSpare && !classified[4].isSpare)
+}
+
+/// Una copia cuya foto indexada ha perdido el fichero, o está en la papelera, no sobra: puede
+/// ser la única. Y al eliminar se exige que la otra copia siga en disco.
+@Test func sparesOnlyOrphansWithALiveTwin() throws {
+    let fixture = try FixtureCatalog()
+    defer { fixture.cleanup() }
+    func orphan(_ name: String) throws -> OrphanFile {
+        let url = fixture.bundle.appendingPathComponent("Originals/9/\(name)")
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try FixtureCatalog.writeJPEG(to: url)
+        let size = (try FileManager.default.attributesOfItem(atPath: url.path)[.size] as? Int64) ?? 0
+        return OrphanFile(relativePath: "Originals/9/\(name)", url: url, size: size)
+    }
+    let db = try SQLiteDatabase(path: fixture.bundle.appendingPathComponent("Fixture.cocatalogdb").path)
+    let liveSize = (try FileManager.default.attributesOfItem(atPath: fixture.bundle.appendingPathComponent("Originals/2026/01/02/2/LONE.jpg").path)[.size] as? Int64) ?? 0
+    try db.execute("ALTER TABLE ZIMAGE ADD COLUMN ZFILE_SIZE INTEGER; UPDATE ZIMAGE SET ZFILE_SIZE = \(liveSize);")
+    let classified = try CatalogReader(url: fixture.bundle).classify([try orphan("LONE.jpg"), try orphan("MISSING.jpg")])
+    #expect(classified[0].isSpare)                                  // LONE.jpg está indexada y con fichero
+    #expect(classified[1].copyOfIndexed && !classified[1].isSpare)   // la indexada MISSING.jpg no tiene fichero
+    let errors = CatalogVerifier.removeSpareOrphans(classified, permanently: true)
+    #expect(errors.keys.sorted() == ["Originals/9/MISSING.jpg"])
+    #expect(!FileManager.default.fileExists(atPath: classified[0].url.path))
+    #expect(FileManager.default.fileExists(atPath: classified[1].url.path))
+    #expect(FileManager.default.fileExists(atPath: fixture.bundle.appendingPathComponent("Originals/2026/01/02/2/LONE.jpg").path))
 }

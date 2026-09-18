@@ -67,6 +67,9 @@ struct VerifyView: View {
                     HStack {
                         Button("Move orphans to folder…") { model.chooseOrphanFolder() }
                             .disabled(result.orphans.isEmpty)
+                        Button("Remove the \(result.spareOrphans.count) spare copies (\(result.spareBytes.formatted(.byteCount(style: .file))))…") { model.requestRemoveSpareOrphans() }
+                            .disabled(result.spareOrphans.isEmpty)
+                            .help("Spare copy: an orphan whose photo (same file name and capture time) is in the catalog, alive and with its file on disk, or that repeats another orphan. Copies reserved to restore a missing file are excluded.")
                         Button("Import the \(result.recoverableOrphans.count) photos not in the catalog…") { model.requestRecoverOrphans() }
                             .disabled(result.recoverableOrphans.isEmpty)
                         Text("Orphans are files inside Originals that the index does not know. \(result.orphanCopies) are spare copies of photos the catalog already has (same file name and capture time); the rest can be imported into the group \"\(ExportViewModel.recoveredGroupName)\", one album per probable album. Moving orphans keeps the folder structure.")
@@ -171,6 +174,14 @@ struct VerifyView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Capture One will open the catalog and create that group with one album per probable album, \"\(ExportViewModel.unfiledFallbackAlbumName)\" for the rest and \"\(ExportViewModel.unfiledDuplicatesAlbumName)\" for repeated copies of photos already in an album. Nothing is removed or moved.")
+        }
+        .confirmationDialog("Remove \(model.verifyResult?.spareOrphans.count ?? 0) spare copies (\((model.verifyResult?.spareBytes ?? 0).formatted(.byteCount(style: .file))))?",
+                            isPresented: $model.showRemoveSpareConfirmation, titleVisibility: .visible) {
+            Button("Move to Trash") { model.removeSpareOrphans(permanently: false) }
+            Button("Delete permanently", role: .destructive) { model.removeSpareOrphans(permanently: true) }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Each of these files is a second copy of a photo whose file is safe elsewhere in the catalog; Capture One does not use them. The Mac Trash lets you recover them until you empty it; deleting permanently frees the space now and cannot be undone. The other copy is checked again just before removing each file.")
         }
         .confirmationDialog("Import \(model.verifyResult?.recoverableOrphans.count ?? 0) orphan photos into the group \"\(ExportViewModel.recoveredGroupName)\"?",
                             isPresented: $model.showRecoverOrphansConfirmation, titleVisibility: .visible) {

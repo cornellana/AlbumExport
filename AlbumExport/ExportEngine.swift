@@ -412,6 +412,10 @@ actor CatalogWorker {
         CatalogVerifier.moveOrphans(orphans, to: folder)
     }
 
+    func removeSpareOrphans(_ orphans: [OrphanFile], permanently: Bool) -> [String: String] {
+        CatalogVerifier.removeSpareOrphans(orphans, permanently: permanently)
+    }
+
     func searchMissing(_ missing: [MissingFile], in folder: URL?, cancellation: CancellationToken? = nil,
                        progress: (@Sendable (Int) -> Void)? = nil, onFound: (@Sendable (Int, URL) -> Void)? = nil) -> (missing: [MissingFile], stats: SearchStats) {
         var stats = SearchStats()
