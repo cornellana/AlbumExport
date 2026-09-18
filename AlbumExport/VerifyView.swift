@@ -55,9 +55,11 @@ struct VerifyView: View {
                             TableColumn("Expected location") { Text(verbatim: $0.expectedPath) }
                             TableColumn("Found at") { item in
                                 if let candidate = item.candidate {
-                                    Text(verbatim: (item.candidateIsOrphan ? "⟲ " : "") + candidate.path)
+                                    Text(verbatim: (item.candidateIsOrphan ? "⟲ " : "") + (item.candidateSizeDiffers ? "≈ " : "") + candidate.path)
                                         .foregroundStyle(Color.green)
-                                        .help(item.candidateIsOrphan ? "Orphan inside the catalog: will be moved into place" : "Found outside the catalog: will be copied")
+                                        .help(item.candidateSizeDiffers
+                                              ? "Same shot (file name and EXIF capture time match) but a slightly different size: usually the untouched original, without metadata embedded later."
+                                              : (item.candidateIsOrphan ? "Orphan inside the catalog: will be moved into place" : "Found outside the catalog: will be copied"))
                                 } else if let indexed = item.alsoIndexedAt {
                                     Text("Already indexed at \(indexed)")
                                         .foregroundStyle(Color.orange)

@@ -413,8 +413,11 @@ actor CatalogWorker {
     }
 
     func searchMissing(_ missing: [MissingFile], in folder: URL?, cancellation: CancellationToken? = nil,
-                       progress: (@Sendable (Int) -> Void)? = nil, onFound: (@Sendable (Int, URL) -> Void)? = nil) -> [MissingFile] {
-        CatalogVerifier.search(missing, in: folder, catalogRoot: reader.rootURL, cancellation: cancellation, progress: progress, onFound: onFound)
+                       progress: (@Sendable (Int) -> Void)? = nil, onFound: (@Sendable (Int, URL) -> Void)? = nil) -> (missing: [MissingFile], stats: SearchStats) {
+        var stats = SearchStats()
+        let result = CatalogVerifier.search(missing, in: folder, catalogRoot: reader.rootURL, cancellation: cancellation,
+                                            progress: progress, onFound: onFound) { stats = $0 }
+        return (result, stats)
     }
 
     func restoreMissing(_ missing: [MissingFile]) -> [String: String] {

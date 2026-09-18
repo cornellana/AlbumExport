@@ -1361,6 +1361,22 @@
         }
       }
     },
+    "Found %lld of %lld missing files (%lld identified by capture date). Searched %lld files in %lld folders; %lld folders could not be read.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trobats %lld de %lld fitxers perduts (%lld identificats per data de captura). S'han revisat %lld fitxers en %lld carpetes; %lld carpetes no s'han pogut llegir."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Encontrados %lld de %lld ficheros perdidos (%lld identificados por fecha de captura). Se han revisado %lld ficheros en %lld carpetas; %lld carpetas no se pudieron leer."
+          }
+        }
+      }
+    },
     "Found at": {
       "localizations": {
         "ca": {
@@ -2653,6 +2669,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mismo nombre ya en álbum"
+          }
+        }
+      }
+    },
+    "Same shot (file name and EXIF capture time match) but a slightly different size: usually the untouched original, without metadata embedded later.": {
+      "localizations": {
+        "ca": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mateixa presa (coincideixen el nom i l'hora de captura EXIF) però amb una mida lleugerament diferent: normalment l'original intacte, sense les metadades incrustades després."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Misma toma (coinciden el nombre y la hora de captura EXIF) pero con un tamaño ligeramente distinto: normalmente el original intacto, sin los metadatos incrustados después."
           }
         }
       }

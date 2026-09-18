@@ -103,6 +103,14 @@ El botón **Verify** compara la carpeta `Originals/` del bundle con el índice:
   sitio sin sacarlos ni reimportar. Lo que no se resuelva así se puede buscar en cualquier
   volumen montado (NAS, discos externos), en una carpeta concreta o con Spotlight; lo
   encontrado fuera se copia a la ruta esperada.
+- **Identificación de un candidato**: mismo nombre y mismo tamaño que el registrado; o, si el
+  tamaño difiere poco (hasta 256 KB o el 1 %), mismo nombre y **misma hora de captura EXIF**.
+  Esto cubre el caso habitual de que la copia importada creciera unos KB al incrustarle
+  lugar u otros metadatos, de modo que el original de la tarjeta o de una copia de seguridad
+  nunca mide igual. Se marcan con `≈`. Una foto distinta con el mismo nombre (contador de
+  cámara repetido) tiene otra hora de captura y se descarta.
+- La búsqueda recorre todas las subcarpetas, entra en otros catálogos y al terminar indica
+  cuántos ficheros y carpetas ha revisado y cuántas carpetas no pudo leer.
 - **Sin álbum**: imágenes indexadas que no pertenecen a ningún álbum de usuario (informativo).
 
 *Move orphans to folder…* saca los huérfanos del bundle a la carpeta elegida conservando

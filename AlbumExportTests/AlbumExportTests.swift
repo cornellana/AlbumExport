@@ -548,10 +548,45 @@ struct FixtureCatalog {
     try FixtureCatalog.writeJPEG(to: other)
     final class Box: @unchecked Sendable { var found: [(Int, URL)] = [] }
     let box = Box()
-    let found = CatalogVerifier.search(missing, in: fixture.root.appendingPathComponent("Disco"), catalogRoot: fixture.bundle) { id, url in box.found.append((id, url)) }
+    let found = CatalogVerifier.search(missing, in: fixture.root.appendingPathComponent("Disco"), catalogRoot: fixture.bundle, onFound: { id, url in box.found.append((id, url)) })
     #expect(found.first?.candidate?.resolvingSymlinksInPath().path == other.resolvingSymlinksInPath().path)
     #expect(box.found.map(\.0) == [14])   // avisado en vivo, una sola vez
     #expect(found.first?.candidateIsOrphan == false)
     #expect(CatalogVerifier.restore(found).isEmpty)
     #expect(FileManager.default.fileExists(atPath: other.path))   // copiado: el otro catálogo queda intacto
+}
+
+
+/// Identidad del candidato: tamaño exacto, o tamaño próximo con el mismo instante de captura.
+@Test func candidateMatchingRule() {
+    let shot = Date(timeIntervalSince1970: 1_748_681_676)   // 2025-05-31 08:54:36 "UTC de cámara"
+    var item = MissingFile(imageID: 1, filename: "_SA15951.ARW", expectedPath: "/x/_SA15951.ARW", size: 58_423_568)
+    item.captureDate = shot
+    #expect(CatalogVerifier.match(item, candidateSize: 58_423_568) { nil } == .exact)
+    // Original de la tarjeta: 10 KB menos (sin metadatos incrustados), misma toma.
+    #expect(CatalogVerifier.match(item, candidateSize: 58_413_056) { shot } == .sameShot)
+    // Desfase de zona horaria de horas enteras: sigue siendo la misma toma.
+    #expect(CatalogVerifier.match(item, candidateSize: 58_413_056) { shot.addingTimeInterval(2 * 3600) } == .sameShot)
+    // Otra foto con el mismo nombre (contador de cámara repetido): otra hora, o tamaño muy distinto.
+    #expect(CatalogVerifier.match(item, candidateSize: 58_413_056) { shot.addingTimeInterval(95) } == nil)
+    #expect(CatalogVerifier.match(item, candidateSize: 58_413_056) { nil } == nil)
+    #expect(CatalogVerifier.match(item, candidateSize: 41_000_000) { shot } == nil)
+    // Índice sin tamaño: basta el nombre (catálogos antiguos).
+    let legacy = MissingFile(imageID: 2, filename: "a.jpg", expectedPath: "/x/a.jpg", size: nil)
+    #expect(CatalogVerifier.match(legacy, candidateSize: 123) { nil } == .exact)
+}
+
+/// La fecha de captura EXIF se lee con ImageIO y se interpreta como UTC, igual que el catálogo.
+@Test func readsExifCaptureDate() throws {
+    let url = FileManager.default.temporaryDirectory.appendingPathComponent("exif-\(UUID().uuidString).jpg")
+    defer { try? FileManager.default.removeItem(at: url) }
+    let space = CGColorSpaceCreateDeviceRGB()
+    let context = try #require(CGContext(data: nil, width: 8, height: 8, bitsPerComponent: 8, bytesPerRow: 32, space: space,
+                                         bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue))
+    let image = try #require(context.makeImage())
+    let destination = try #require(CGImageDestinationCreateWithURL(url as CFURL, UTType.jpeg.identifier as CFString, 1, nil))
+    let exif: [CFString: Any] = [kCGImagePropertyExifDateTimeOriginal: "2025:05:31 08:54:36"]
+    CGImageDestinationAddImage(destination, image, [kCGImagePropertyExifDictionary: exif] as CFDictionary)
+    #expect(CGImageDestinationFinalize(destination))
+    #expect(CatalogVerifier.captureDate(of: url) == Date(timeIntervalSince1970: 1_748_681_676))
 }

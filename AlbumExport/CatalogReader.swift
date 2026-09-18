@@ -292,18 +292,25 @@ final class CatalogReader: @unchecked Sendable {
         let root: String?
         let path: String?
         let size: Int64?
+        let captureDate: Date?
     }
 
     private func allImageLocations() throws -> [ImageLocation] {
-        let hasSize = db.columns(of: "ZIMAGE").contains("ZFILE_SIZE")
+        let imageColumns = db.columns(of: "ZIMAGE")
+        let hasSize = imageColumns.contains("ZFILE_SIZE")
+        let hasDate = imageColumns.contains("ZEXP_DATE")
         return try db.query("""
             SELECT i.Z_PK AS pk, i.ZIMAGEFILENAME AS f, \(hasSize ? "i.ZFILE_SIZE" : "NULL") AS size,
+                   \(hasDate ? "i.ZEXP_DATE" : "NULL") AS expdate,
                    p.ZISRELATIVE AS rel, p.ZMACROOT AS root, p.ZRELATIVEPATH AS path
             FROM ZIMAGE i LEFT JOIN ZPATHLOCATION p ON p.Z_PK = i.ZIMAGELOCATION
             """).compactMap { row in
             guard let pk = row.int("pk"), let f = row.string("f") else { return nil }
+            // ZEXP_DATE: segundos desde 1970 con la hora local de cámara tratada como UTC.
+            let date = (row.values["expdate"] as? Double).map { Date(timeIntervalSince1970: $0.rounded(.down)) }
+                ?? (row.values["expdate"] as? Int64).map { Date(timeIntervalSince1970: Double($0)) }
             return ImageLocation(id: pk, filename: f, relative: row.bool("rel"), root: row.string("root"), path: row.string("path"),
-                                 size: row.int("size").map(Int64.init))
+                                 size: row.int("size").map(Int64.init), captureDate: date)
         }
     }
 
@@ -354,9 +361,11 @@ final class CatalogReader: @unchecked Sendable {
             }
         }
         // Un perdido cuyo nombre ya está indexado con fichero presente es una importación duplicada.
+        let dates = Dictionary(uniqueKeysWithValues: locations.map { ($0.id, $0.captureDate) })
         return missing.map { item in
             var updated = item
             updated.alsoIndexedAt = presentByName[item.filename.lowercased()]
+            updated.captureDate = dates[item.imageID] ?? nil
             return updated
         }.sorted { $0.expectedPath < $1.expectedPath }
     }

@@ -1,4 +1,5 @@
 import Foundation
+import ImageIO
 
 /// Fichero presente en `Originals/` del bundle que ningún registro del índice referencia.
 struct OrphanFile: Identifiable, Hashable, Sendable {
@@ -23,6 +24,11 @@ struct MissingFile: Identifiable, Hashable, Sendable {
     /// Otra entrada del índice con el mismo nombre cuyo fichero sí existe: la foto ya está en el
     /// catálogo por otra vía (importación duplicada); este registro perdido sobra.
     var alsoIndexedAt: String?
+    /// Fecha de captura registrada en el índice (`ZEXP_DATE`: hora local de cámara tratada como UTC).
+    var captureDate: Date?
+    /// El candidato es la misma toma pero no mide igual que el registro (p. ej. el original de
+    /// la tarjeta, sin los metadatos que otra app incrustó después en la copia importada).
+    var candidateSizeDiffers = false
     var id: Int { imageID }
 }
 
@@ -34,6 +40,21 @@ struct UnfiledImage: Identifiable, Hashable, Sendable {
     /// Álbum que ya contiene otra foto con el mismo nombre de fichero: probable duplicado.
     let duplicateInAlbum: String?
     var id: Int { imageID }
+}
+
+/// Cómo se ha identificado un fichero candidato como el original de una entrada perdida.
+enum CandidateMatch: Equatable, Sendable {
+    /// Mismo nombre y mismo tamaño que el registrado.
+    case exact
+    /// Mismo nombre, tamaño muy próximo y mismo instante de captura EXIF.
+    case sameShot
+}
+
+/// Recuento de una búsqueda de perdidos, para que el usuario vea que se recorrió todo.
+struct SearchStats: Sendable, Equatable {
+    var files = 0
+    var folders = 0
+    var unreadable = 0
 }
 
 /// Resultado de la verificación de un catálogo.
@@ -119,10 +140,10 @@ enum CatalogVerifier {
             var updated = item
             let name = item.filename.lowercased()
             if let index = available[name]?.firstIndex(where: { orphan in
-                guard let size = item.size, size > 0 else { return true }
-                return orphan.size == size
+                match(item, candidateSize: orphan.size) { captureDate(of: orphan.url) } != nil
             }) {
                 let orphan = available[name]!.remove(at: index)
+                updated.candidateSizeDiffers = match(item, candidateSize: orphan.size) { captureDate(of: orphan.url) } == .sameShot
                 updated.candidate = orphan.url
                 updated.candidateIsOrphan = true
             }
@@ -160,62 +181,127 @@ enum CatalogVerifier {
             .filter { !$0.path.hasPrefix("/System/") }
     }
 
-    /// Busca los ficheros perdidos por nombre en una carpeta o volumen (recursivo) o, si
-    /// `folder` es `nil`, en los volúmenes indexados por Spotlight. Un candidato solo vale si
-    /// coincide el tamaño registrado (cuando se conoce). Se ignora el propio catálogo y los
-    /// perdidos ya resueltos con un huérfano.
+    // MARK: Identidad del candidato
+
+    /// Diferencia de tamaño admitida entre el registro y el candidato cuando la fecha de captura
+    /// coincide: metadatos incrustados (XMP/IPTC) cambian el tamaño de un RAW en unos KB.
+    static func sizeTolerance(for indexedSize: Int64) -> Int64 {
+        max(262_144, indexedSize / 100)
+    }
+
+    /// Decide si un candidato es el original de una entrada perdida.
+    ///
+    /// El tamaño del índice solo coincide al byte en el 96 % de los ficheros: si otra aplicación
+    /// incrustó metadatos en la copia importada, el original virgen (tarjeta, copia de seguridad)
+    /// mide unos KB menos. En ese caso se exige el mismo instante de captura EXIF.
+    /// - Parameter candidateDate: se evalúa solo si hace falta (leer EXIF cuesta tiempo).
+    static func match(_ item: MissingFile, candidateSize: Int64, candidateDate: () -> Date?) -> CandidateMatch? {
+        guard let indexed = item.size, indexed > 0 else { return .exact }   // índice sin tamaño: basta el nombre
+        if indexed == candidateSize { return .exact }
+        guard abs(indexed - candidateSize) <= sizeTolerance(for: indexed),
+              let wanted = item.captureDate, let actual = candidateDate() else { return nil }
+        // Se admite un desfase de horas enteras por zonas horarias mal interpretadas; los minutos
+        // y segundos deben coincidir.
+        let delta = abs(wanted.timeIntervalSince(actual))
+        let remainder = delta.truncatingRemainder(dividingBy: 3600)
+        let wholeHours = min(remainder, 3600 - remainder) <= 2 && delta <= 14 * 3600 + 2
+        return wholeHours ? .sameShot : nil
+    }
+
+    private static let exifDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(identifier: "UTC")
+        f.dateFormat = "yyyy:MM:dd HH:mm:ss"
+        return f
+    }()
+
+    /// Fecha de captura EXIF de un fichero (RAW incluidos), leída con ImageIO sin decodificar la imagen.
+    /// Se interpreta como UTC, igual que la guarda el catálogo.
+    static func captureDate(of url: URL) -> Date? {
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any] else { return nil }
+        let exif = properties[kCGImagePropertyExifDictionary] as? [CFString: Any]
+        let tiff = properties[kCGImagePropertyTIFFDictionary] as? [CFString: Any]
+        let text = (exif?[kCGImagePropertyExifDateTimeOriginal] as? String) ?? (tiff?[kCGImagePropertyTIFFDateTime] as? String)
+        return text.flatMap { exifDateFormatter.date(from: $0) }
+    }
+
+    // MARK: Búsqueda
+
+    /// Busca los ficheros perdidos por nombre en una carpeta o volumen, recorriendo todas sus
+    /// subcarpetas (también otros catálogos), o, si `folder` es `nil`, en los volúmenes indexados
+    /// por Spotlight. Un candidato vale si `match` lo identifica como el mismo original. Se ignora
+    /// el propio catálogo y los perdidos ya resueltos con un huérfano.
     /// - Parameters:
     ///   - progress: ficheros recorridos hasta ahora.
     ///   - onFound: se llama en cuanto un perdido queda emparejado, con su `imageID` y el fichero.
+    ///   - stats: recuento final de ficheros y carpetas recorridos y de carpetas ilegibles.
     static func search(_ missing: [MissingFile], in folder: URL?, catalogRoot: URL,
                        cancellation: CancellationToken? = nil, progress: (@Sendable (Int) -> Void)? = nil,
-                       onFound: (@Sendable (Int, URL) -> Void)? = nil) -> [MissingFile] {
+                       onFound: (@Sendable (Int, URL) -> Void)? = nil,
+                       stats: ((SearchStats) -> Void)? = nil) -> [MissingFile] {
         guard !missing.isEmpty else { return missing }
-        var index: [String: [URL]] = [:]   // nombre en minúsculas -> rutas encontradas
         let pending = missing.filter { $0.candidate == nil }
         let wanted = Set(pending.map { $0.filename.lowercased() })
-        // Perdidos pendientes por nombre, para avisar en vivo al primer candidato válido.
         var pendingByName: [String: [MissingFile]] = Dictionary(grouping: pending) { $0.filename.lowercased() }
+        var resolved: [Int: (url: URL, kind: CandidateMatch)] = [:]
         let rootPath = catalogRoot.standardizedFileURL.path + "/"
+        var counts = SearchStats()
+
         func consider(_ url: URL, name: String) {
-            index[name, default: []].append(url)
             guard var items = pendingByName[name], !items.isEmpty else { return }
             let size = ExportPlanner.fileSize(url)
-            if let i = items.firstIndex(where: { $0.size == nil || $0.size == 0 || $0.size == size }) {
-                onFound?(items[i].imageID, url)
-                items.remove(at: i)
-                pendingByName[name] = items
+            var cachedDate: Date??
+            let date: () -> Date? = {
+                if cachedDate == nil { cachedDate = .some(captureDate(of: url)) }
+                return cachedDate!
+            }
+            for (i, item) in items.enumerated() {
+                if let kind = match(item, candidateSize: size, candidateDate: date) {
+                    resolved[item.imageID] = (url, kind)
+                    onFound?(item.imageID, url)
+                    items.remove(at: i)
+                    pendingByName[name] = items
+                    return
+                }
             }
         }
+
         if let folder {
-            if let enumerator = FileManager.default.enumerator(at: folder, includingPropertiesForKeys: [.isRegularFileKey], options: [.skipsHiddenFiles]) {
-                var scanned = 0
-                for case let url as URL in enumerator {
-                    if cancellation?.isCancelled == true { break }
-                    scanned += 1
-                    if scanned % 1000 == 0 { progress?(scanned) }
-                    let name = url.lastPathComponent.lowercased()
-                    guard wanted.contains(name), !url.standardizedFileURL.path.hasPrefix(rootPath) else { continue }
-                    consider(url, name: name)
+            let enumerator = FileManager.default.enumerator(
+                at: folder, includingPropertiesForKeys: [.isDirectoryKey], options: [.skipsHiddenFiles]) { _, _ in
+                counts.unreadable += 1
+                return true   // una carpeta ilegible no detiene el recorrido
+            }
+            while let url = enumerator?.nextObject() as? URL {
+                if cancellation?.isCancelled == true { break }
+                if (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true {
+                    counts.folders += 1
+                    continue
                 }
+                counts.files += 1
+                if counts.files % 1000 == 0 { progress?(counts.files) }
+                let name = url.lastPathComponent.lowercased()
+                guard wanted.contains(name), !url.standardizedFileURL.path.hasPrefix(rootPath) else { continue }
+                consider(url, name: name)
             }
         } else {
             for name in wanted {
                 if cancellation?.isCancelled == true { break }
                 for path in spotlight(name: name) where !path.hasPrefix(rootPath) {
+                    counts.files += 1
                     consider(URL(fileURLWithPath: path), name: name)
                 }
             }
         }
+        stats?(counts)
         return missing.map { item in
-            guard item.candidate == nil else { return item }   // ya resuelto (p. ej. con un huérfano)
+            guard item.candidate == nil, let hit = resolved[item.imageID] else { return item }
             var updated = item
-            let candidates = index[item.filename.lowercased()] ?? []
-            updated.candidate = candidates.first { candidate in
-                guard let size = item.size, size > 0 else { return true }
-                return ExportPlanner.fileSize(candidate) == size
-            }
+            updated.candidate = hit.url
             updated.candidateIsOrphan = false
+            updated.candidateSizeDiffers = hit.kind == .sameShot
             return updated
         }
     }
@@ -251,9 +337,15 @@ enum CatalogVerifier {
                 } else {
                     try FileManager.default.copyItem(at: candidate, to: target)
                 }
-                if let size = item.size, size > 0, ExportPlanner.fileSize(target) != size {
-                    try? FileManager.default.removeItem(at: target)
-                    throw ExportError.sizeMismatch(expected: size, actual: ExportPlanner.fileSize(target))
+                // Integridad de la copia: contra el candidato, no contra el índice (que puede
+                // diferir unos KB si la copia original llevaba metadatos incrustados).
+                if !item.candidateIsOrphan {
+                    let expected = ExportPlanner.fileSize(candidate)
+                    let actual = ExportPlanner.fileSize(target)
+                    if expected != actual {
+                        try? FileManager.default.removeItem(at: target)
+                        throw ExportError.sizeMismatch(expected: expected, actual: actual)
+                    }
                 }
             } catch {
                 errors[item.expectedPath] = error.localizedDescription
@@ -266,7 +358,7 @@ enum CatalogVerifier {
 
     static func writeReport(_ result: VerifyResult, catalogName: String, to url: URL) throws {
         func cell(_ text: String) -> String { "\"" + text.replacingOccurrences(of: "\"", with: "\"\"") + "\"" }
-        var lines = ["kind,path,size,found_at"]
+        var lines = ["kind,path,size,found_at_or_album"]
         for o in result.orphans { lines.append([cell("orphan"), cell(o.relativePath), String(o.size), ""].joined(separator: ",")) }
         for m in result.missing { lines.append([cell("missing"), cell(m.expectedPath), m.size.map(String.init) ?? "", cell(m.candidate?.path ?? "")].joined(separator: ",")) }
         for u in result.unfiled { lines.append([cell(u.duplicateInAlbum == nil ? "not_in_album" : "not_in_album_duplicate"), cell(u.path), "", cell(u.duplicateInAlbum ?? "")].joined(separator: ",")) }

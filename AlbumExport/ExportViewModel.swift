@@ -82,7 +82,7 @@ final class ExportViewModel {
         var skipNext = false
         for arg in all {
             if skipNext { skipNext = false; continue }
-            if arg == "--move-to" { skipNext = true; continue }
+            if arg == "--move-to" || arg == "--search" { skipNext = true; continue }
             if arg.hasPrefix("-") { continue }
             positional.append(arg)
         }
@@ -469,6 +469,13 @@ final class ExportViewModel {
                     Task { @MainActor in self.verifyProgress = Self.describe(progress) }
                 }
                 verifyResult = result
+                if let searchPath = Self.argument(after: "--search") {
+                    FileHandle.standardError.write(Data("AlbumExport verify: files=\(result.filesOnDisk) orphans=\(result.orphans.count) missing=\(result.missing.count) unfiled=\(result.unfiled.count)\n".utf8))
+                    isVerifying = false
+                    verifyCancellation = nil
+                    runSearch(folder: URL(fileURLWithPath: searchPath))
+                    return
+                }
                 if autoQuit {
                     FileHandle.standardError.write(Data("AlbumExport verify: files=\(result.filesOnDisk) orphans=\(result.orphans.count) missing=\(result.missing.count) unfiled=\(result.unfiled.count)\n".utf8))
                 }
@@ -480,6 +487,12 @@ final class ExportViewModel {
             verifyCancellation = nil
             if autoQuit { NSApplication.shared.terminate(nil) }
         }
+    }
+
+    private static func argument(after flag: String) -> String? {
+        let all = CommandLine.arguments
+        guard let i = all.firstIndex(of: flag), all.indices.contains(i + 1) else { return nil }
+        return all[i + 1]
     }
 
     func cancelVerify() {
@@ -558,7 +571,7 @@ final class ExportViewModel {
         let where_ = folder?.path ?? "Spotlight"
         verifyProgress = String(localized: "Searching in \(where_)…", comment: "Progreso de búsqueda de perdidos")
         Task {
-            let updated = await worker.searchMissing(result.missing, in: folder, cancellation: token, progress: { scanned in
+            let (updated, stats) = await worker.searchMissing(result.missing, in: folder, cancellation: token, progress: { scanned in
                 Task { @MainActor in
                     self.verifyProgress = String(localized: "Searching in \(where_): \(scanned) files checked…", comment: "Progreso de búsqueda de perdidos")
                 }
@@ -575,7 +588,12 @@ final class ExportViewModel {
             isSearching = false
             verifyResult?.missing = updated
             let found = updated.filter { $0.candidate != nil }.count
-            verifyMessage = String(localized: "Found \(found) of \(updated.count) missing files", comment: "Resumen de búsqueda")
+            let approximate = updated.filter { $0.candidateSizeDiffers }.count
+            verifyMessage = String(localized: "Found \(found) of \(updated.count) missing files (\(approximate) identified by capture date). Searched \(stats.files) files in \(stats.folders) folders; \(stats.unreadable) folders could not be read.", comment: "Resumen de búsqueda")
+            if autoQuit {
+                FileHandle.standardError.write(Data("AlbumExport search: found=\(found) byDate=\(approximate) files=\(stats.files) folders=\(stats.folders) unreadable=\(stats.unreadable)\n".utf8))
+                NSApplication.shared.terminate(nil)
+            }
             verifyProgress = ""
         }
     }
