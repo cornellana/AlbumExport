@@ -394,18 +394,43 @@ struct ExportEngine {
 /// Serializa el acceso al catálogo (la conexión SQLite no es segura entre hilos) y saca el
 /// trabajo pesado del hilo principal.
 actor CatalogWorker {
-    let reader: CatalogReader
+    /// Instantánea del índice. Se renueva cuando el catálogo cambia en disco (ver `refreshIfChanged`).
+    private(set) var reader: CatalogReader
+    nonisolated let rootURL: URL
+    /// Fechas de modificación de la base de datos y su WAL cuando se tomó la instantánea.
+    private var stamp: [Date?]
 
     init(reader: CatalogReader) {
         self.reader = reader
+        rootURL = reader.rootURL
+        stamp = Self.modificationDates(of: reader.databaseURL)
+    }
+
+    private static func modificationDates(of database: URL) -> [Date?] {
+        ["", "-wal"].map { suffix in
+            (try? FileManager.default.attributesOfItem(atPath: database.path + suffix))?[.modificationDate] as? Date
+        }
+    }
+
+    /// Vuelve a copiar la base de datos si Capture One la ha modificado desde la última instantánea.
+    /// Sin esto, "Verify again" comparaba el disco de ahora con el índice de cuando se abrió el
+    /// catálogo: las fotos borradas después en Capture One salían como perdidas, y las movidas,
+    /// como huérfanas.
+    func refreshIfChanged() throws {
+        let current = Self.modificationDates(of: reader.databaseURL)
+        guard current != stamp else { return }
+        reader = try CatalogReader(url: reader.databaseURL)
+        stamp = current
     }
 
     func albums() throws -> [Album] {
-        try reader.albums()
+        try refreshIfChanged()
+        return try reader.albums()
     }
 
     func verify(cancellation: CancellationToken? = nil, progress: (@Sendable (CatalogVerifier.Progress) -> Void)? = nil) throws -> VerifyResult {
-        try CatalogVerifier.scan(catalog: reader, cancellation: cancellation, progress: progress)
+        try refreshIfChanged()
+        return try CatalogVerifier.scan(catalog: reader, cancellation: cancellation, progress: progress)
     }
 
     func moveOrphans(_ orphans: [OrphanFile], to folder: URL) -> [String: String] {
@@ -424,8 +449,16 @@ actor CatalogWorker {
         return (result, stats)
     }
 
+    /// Restaura solo lo que sigue perdido según el índice de ahora mismo: si entre la verificación
+    /// y este momento Capture One borró o recolocó la foto, su entrada se descarta.
     func restoreMissing(_ missing: [MissingFile]) -> [String: String] {
-        CatalogVerifier.restore(missing)
+        guard (try? refreshIfChanged()) != nil, let current = try? reader.missingFiles() else {
+            return Dictionary(uniqueKeysWithValues: missing.filter { $0.candidate != nil }.map {
+                ($0.expectedPath, String(localized: "The catalog could not be read again: nothing restored", comment: "Error al restaurar"))
+            })
+        }
+        let stillMissing = Set(current.map { "\($0.imageID)|\($0.expectedPath)" })
+        return CatalogVerifier.restore(missing.filter { stillMissing.contains("\($0.imageID)|\($0.expectedPath)") })
     }
 
     /// Crea (o completa) en Capture One el grupo de fotos sin clasificar, con un subálbum por
@@ -537,7 +570,8 @@ actor CatalogWorker {
     }
 
     func plan(patterns: [String], selectedAlbumIDs: Set<Int>, albums: [Album], options: ExportOptions, destination: URL?) throws -> ExportPlan {
-        try ExportPlanner.plan(patterns: patterns, selectedAlbumIDs: selectedAlbumIDs, albums: albums, catalog: reader, options: options, destination: destination)
+        try refreshIfChanged()
+        return try ExportPlanner.plan(patterns: patterns, selectedAlbumIDs: selectedAlbumIDs, albums: albums, catalog: reader, options: options, destination: destination)
     }
 
     func export(plan: ExportPlan, destination: URL, options: ExportOptions, writer: ExifToolWriter?, cancellation: CancellationToken,

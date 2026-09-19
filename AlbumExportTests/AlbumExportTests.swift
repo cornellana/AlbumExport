@@ -720,3 +720,32 @@ struct FixtureCatalog {
     #expect(FileManager.default.fileExists(atPath: classified[1].url.path))
     #expect(FileManager.default.fileExists(atPath: fixture.bundle.appendingPathComponent("Originals/2026/01/02/2/LONE.jpg").path))
 }
+
+/// "Verify again" debe ver los cambios hechos en el catálogo después de abrirlo: el worker renueva
+/// su copia del índice cuando la base de datos cambia en disco, y restaurar descarta lo que ya
+/// no está perdido según el índice de ahora.
+@Test func workerRefreshesSnapshotWhenCatalogChanges() async throws {
+    let fixture = try FixtureCatalog()
+    defer { fixture.cleanup() }
+    let worker = CatalogWorker(reader: try CatalogReader(url: fixture.bundle))
+    let first = try await worker.verify()
+    let lost = try #require(first.missing.first { $0.filename == "MISSING.jpg" })
+
+    // Capture One borra la foto del catálogo después de la primera verificación.
+    let dbURL = fixture.bundle.appendingPathComponent("Fixture.cocatalogdb")
+    let db = try SQLiteDatabase(path: dbURL.path)
+    try db.execute("DELETE FROM ZIMAGE WHERE Z_PK = 14;")
+    try FileManager.default.setAttributes([.modificationDate: Date().addingTimeInterval(5)], ofItemAtPath: dbURL.path)
+
+    // Restaurar con el resultado antiguo no debe reponer un fichero para un registro que ya no existe.
+    let source = fixture.bundle.deletingLastPathComponent().appendingPathComponent("found-MISSING.jpg")
+    try FixtureCatalog.writeJPEG(to: source)
+    defer { try? FileManager.default.removeItem(at: source) }
+    var stale = lost
+    stale.candidate = source
+    _ = await worker.restoreMissing([stale])
+    #expect(!FileManager.default.fileExists(atPath: lost.expectedPath))
+
+    let second = try await worker.verify()
+    #expect(!second.missing.contains { $0.filename == "MISSING.jpg" })
+}

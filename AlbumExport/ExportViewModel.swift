@@ -241,7 +241,7 @@ final class ExportViewModel {
         panel.canCreateDirectories = true
         panel.allowsMultipleSelection = false
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        if let root = worker?.reader.rootURL, url.path.hasPrefix(root.path) {
+        if let root = worker?.rootURL, url.path.hasPrefix(root.path) {
             errorMessage = String(localized: "The destination cannot be inside the catalog.", comment: "Error de destino")
             return
         }
@@ -445,10 +445,8 @@ final class ExportViewModel {
     private(set) var verifyResult: VerifyResult? {
         didSet { catalogOpenInCaptureOne = Self.isOpenInCaptureOne(catalogURL) }
     }
-    /// Capture One tenía abierto el catálogo al verificar. Capture One guarda sus cambios en disco
-    /// con retraso: una foto recién borrada allí (y su fichero) puede seguir en el índice que lee
-    /// esta app y parecer "perdida". Restaurar o borrar ficheros en ese estado es engañoso, así
-    /// que esas acciones se bloquean hasta verificar con el catálogo cerrado.
+    /// Capture One tenía abierto el catálogo al verificar: se avisa de que conviene verificar de
+    /// nuevo tras cualquier cambio hecho allí, antes de restaurar o borrar ficheros.
     private(set) var catalogOpenInCaptureOne = false
 
     /// Capture One en marcha y fichero `writelock` presente en el bundle del catálogo.
@@ -535,7 +533,7 @@ final class ExportViewModel {
         panel.canChooseDirectories = true
         panel.canCreateDirectories = true
         guard panel.runModal() == .OK, let url = panel.url else { return }
-        if let root = worker?.reader.rootURL, url.path.hasPrefix(root.path) {
+        if let root = worker?.rootURL, url.path.hasPrefix(root.path) {
             errorMessage = String(localized: "The destination cannot be inside the catalog.", comment: "Error de destino")
             return
         }
